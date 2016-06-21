@@ -6,7 +6,27 @@
 		{
 			"type":"file",
 			"name":"File1"
+		},
+		{
+			"type":"file",
+			"name":"File2"
+		},
+		{
+			"type":"dir",
+			"name":"Dir 2",
+			"list":[
+				{
+					"type":"file",
+					"name":"File1"
+				}
+			]
 		}
 	]
+},
+{
+
+	"type":"dir",
+	"name":"Dir 3",
+	"list":[]
 }
 ]

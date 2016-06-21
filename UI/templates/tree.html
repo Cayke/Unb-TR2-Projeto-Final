@@ -5,7 +5,7 @@
 {% for jsonElement in json recursive %}
 	{% if jsonElement["type"] == "dir" %}
 		<li>
-		{{jsonElement["name"]}} 
+		<img src="/static/assets/dir.png">  {{jsonElement["name"]}} 
 		{% if jsonElement["list"] != "" %}
 			<ul>
 				{{loop(jsonElement["list"])}}
@@ -14,14 +14,14 @@
 		</li>
 	{% endif %}
 	{% if jsonElement["type"] == "file" %}
-		<li>{{jsonElement["name"]}}</li>
+		<li><img src="/static/assets/file.png">  {{jsonElement["name"]}}</li>
 	{% endif %}
 {% endfor %}
 </ul>
 </body></html>
 <!-- 
-<img src="assets/dir.png"> 
-<img src="assets/file.png">  -->
+
+ -->
 
 <!-- <html>
 <body>
