@@ -1,0 +1,18 @@
+<html>
+<body>
+<title>Files</title>
+<ul>
+{% for element in json recursive %}
+    {% if element ==  "file" %}
+       <li>{{json[element]}}</li>
+    {% elif element == "dir" %}
+        <li>{{json[element]}}</li>
+    {% else %}
+        <li><ul>{{ loop(json[element]) }}</ul></li>
+    {% endif %}
+{% endfor %}
+</ul>
+</body></html>
+<!-- 
+<img src="assets/dir.png"> 
+<img src="assets/file.png">  -->
