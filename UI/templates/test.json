@@ -1,6 +1,12 @@
+[
 {
-	"dir":"Dir 1",
+	"type":"dir",
+	"name":"Dir 1",
 	"list":[
-		{"file":"File 1"}
+		{
+			"type":"file",
+			"name":"File1"
+		}
 	]
 }
+]

@@ -2,17 +2,44 @@
 <body>
 <title>Files</title>
 <ul>
-{% for element in json recursive %}
-    {% if element ==  "file" %}
-       <li>{{json[element]}}</li>
-    {% elif element == "dir" %}
-        <li>{{json[element]}}</li>
-    {% else %}
-        <li><ul>{{ loop(json[element]) }}</ul></li>
-    {% endif %}
+{% for jsonElement in json recursive %}
+	{% if jsonElement["type"] == "dir" %}
+		<li>
+		{{jsonElement["name"]}} 
+		{% if jsonElement["list"] != "" %}
+			<ul>
+				{{loop(jsonElement["list"])}}
+			</ul>
+		{% endif %}
+		</li>
+	{% endif %}
+	{% if jsonElement["type"] == "file" %}
+		<li>{{jsonElement["name"]}}</li>
+	{% endif %}
 {% endfor %}
 </ul>
 </body></html>
 <!-- 
 <img src="assets/dir.png"> 
 <img src="assets/file.png">  -->
+
+<!-- <html>
+<body>
+<title>Files</title>
+<ul>
+{% for jsonElement in json recursive %}
+	{% set outer_loop = loop %}	
+	{% for element in jsonElement recursive %}
+	    {% if element == "file" %}
+	       <li>{{json[element]}}</li>
+	    {% elif element == "dir" %}
+	       <li>{{json[element]}}</li>
+	    {% elif element == "list" %}
+	       <li>
+	       <ul>{{ outer_loop(json[element]) }}</ul>
+	       </li>
+	    {% endif %}
+	{% endfor %}
+{% endfor %}
+</ul>
+</body></html> -->
