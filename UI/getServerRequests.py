@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-
+import json
 import callbacksServerRequest as CK
 
 # Envio de mensagens ao servidor
@@ -11,7 +11,10 @@ def totalUsedSize():
 
 def fileDistribution():
 	print "File distribution"
-
+	with open('templates/test.json') as data_file: 
+			jsonFile = json.load(data_file)
+	return jsonFile
+	
 def countNodes():
 	print "Nós ativos"
 
