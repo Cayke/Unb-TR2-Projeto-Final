@@ -83,6 +83,7 @@ class UIServer:
         return [dirPage]
 
     def uploadFile(self,env,resp):
+        print "Here"
         body = self.readUploadFile(env)
         form = cgi.FieldStorage(fp=body, environ=env, keep_blank_values=True)
         print form
