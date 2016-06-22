@@ -1,12 +1,19 @@
 <html>
 <title>File options</title>
 <body>
-#PATH#
+<B>File Path:</B> #PATH#
+<P>
 <form method=POST action="changeFileName">
-    <P><B>Enter new file name:</B>
-    <P><input type=text name=file>
-    <P><input type=submit>
+    <B>Enter new file name:</B>
+    <input type=text name=file>
+    <input type=submit value="Change name">
 </form>
-<button type="button">Download file</button>
-<button type="button">Delete file</button>
+<form method="GET"> 
+<B>Donwload file:</B>
+<input type="submit" name="action" value="Download">
+</form>
+<form method="GET"> 
+<B>Delete file:</B>
+<input type="submit" name="action" value="Delete">
+</form>
 </body></html>

@@ -2,8 +2,8 @@
 import json
 
 # Envio de mensagens ao servidor
-def countFiles():
-	print "Descobrir número de arquivos"
+def getServerInfo():
+	print "Descobrir número de arquivos, quantidade de dados e número de users conectados"
 
 def totalUsedSize():
 	print "Quantidade de dados utilziada"

@@ -24,24 +24,14 @@ class UIServer:
         server=simple_server.make_server('', 8000, self.app)
         server.serve_forever()
 
+#MARK: Error
     def not_found(self,environ, start_response):
         """Called if no URL matches."""
         start_response('404 NOT FOUND', [('Content-Type', 'text/plain')])
         return ['Not Found']
 
-    def login(self,env,resp):
-        if env['REQUEST_METHOD'] == 'POST':
-            post_env = env.copy()
-            post_env['QUERY_STRING'] = ''
-            post = cgi.FieldStorage(
-                fp=env['wsgi.input'],
-                environ=post_env,
-                keep_blank_values=True
-            )
-            self.userName = post['user'].value
-            return self.fileStructure(env,resp)
-        return [self.userName]
 
+#MARK: Login
     def main(self,env,resp):
         resp('200 OK', [('Content-type', 'text/html')])
         login = open('templates/login.html','r').read()
@@ -58,28 +48,55 @@ class UIServer:
         else:
             return [login]
 
+    def login(self,env,resp):
+        if env['REQUEST_METHOD'] == 'POST':
+            post_env = env.copy()
+            post_env['QUERY_STRING'] = ''
+            post = cgi.FieldStorage(
+                fp=env['wsgi.input'],
+                environ=post_env,
+                keep_blank_values=True
+            )
+            self.userName = post['user'].value
+            return self.fileStructure(env,resp)
+        return [self.userName]
+
+#MARK: Files page
     def fileStructure(self,env,resp):
         resp('200 OK', [('Content-type', 'text/html')])
         jsonFile = getServerRequests.fileDistribution()
         html = UIGenerator.generateFileTreePage(jsonFile)
-        return [html]
+        return html
 
-    def filePage(self,env,resp):
-        resp('200 OK', [('Content-type', 'text/html')])
-        filePage = open('templates/filePage.html','r').read()
-        filePage = filePage.replace("#PATH#",env['PATH_INFO']) 
-        return [filePage]
-
+#MARK: Dir operations
     def dirPage(self,env,resp):
         resp('200 OK', [('Content-type', 'text/html')])
         dirPage = open('templates/dirPage.html','r').read()
         dirPage = dirPage.replace("#PATH#",env['PATH_INFO']) 
         return [dirPage]
+        return [html]
 
-    def downloadFile(self,env,resp):
-        file = getServerRequests.downloadFile()
-# TODO: Present file
+#MARK: FILES OPERATIOS
+    def filePage(self,env,resp):
+        resp('200 OK', [('Content-type', 'text/html')])
+        filePage = open('templates/filePage.html','r').read()
+        filePath = env['PATH_INFO'].strip("/filePage")
+        fileName = filePath.split('/')[-1]
+        filePage = filePage.replace("#PATH#",filePath) 
+        filePage = filePage.replace("#FILE#",fileName)
+        query_string = env['QUERY_STRING']
+        action = query_string.split('=')[-1]
+        if action == "Download":
+            self.downloadFile(filePath)
+        elif action == "Delete":
+            print  "Delete"
+        return [filePage]
 
+    def downloadFile(self,filePath):
+        getServerRequests.downloadFile(filePath)
+        
+
+#MARK: Static folder reading
     def static_app(self,env, resp):
         """Serve static files from the directory named
         in STATIC_FILES"""
@@ -93,8 +110,7 @@ class UIServer:
         resp('200 OK', headers)
         return [content]    
 
-    # A relatively simple WSGI application. It's going to print out the
-    # environment dictionary after being updated by setup_testing_defaults
+#MARK: Main manager        
     def app(self,env, resp):
         if env['PATH_INFO'].startswith(self.STATIC_URL_PREFIX):
             return self.static_app(env, resp)

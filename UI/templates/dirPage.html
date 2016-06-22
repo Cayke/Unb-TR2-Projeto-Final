@@ -1,12 +1,20 @@
 <html>
 <title>Dir options</title>
 <body>
-#PATH#
+<B>Directory Path:</B> #PATH#
+<P>
 <form method=POST action="changeFileName">
-    <P><B>Enter new dir name:</B>
-    <P><input type=text name=dir>
-    <P><input type=submit>
+    <B>Enter new dir name:</B>
+    <input type=text name=dir>
+    <input type=submit>
 </form>
-<button type="button">Upload file</button>
-<button type="button">Delete dir</button>
+<form>
+	<B>Upload File to directory</B>
+	<input type="file" name="text" accept=".txt">
+	<input type="submit">
+</form>
+<form>
+	<B> Delete directory</B>
+	<input type="submit" name="action" value="Delete">
+</form>
 </body></html>

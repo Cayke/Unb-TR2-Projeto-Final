@@ -2,13 +2,11 @@ import json
 import unicodedata
 
 def generateFileTreePage(jsonFile):
-	html = "<html>"
-	html += "<body>"
-	html += "<title>Files</title>"
-	html += "<ul>"
-	html += generateFileTreeHTML(jsonFile,"")
+	html = open('templates/mainPage.html','r').read()
+	html += unicodedata.normalize('NFKD', generateFileTreeHTML(jsonFile,"")).encode('ascii','ignore')
 	html += "</ul></body></html>"
-	return unicodedata.normalize('NFKD', html).encode('ascii','ignore')
+	print html
+	return html
 
 
 def generateFileTreeHTML(jsonFile, currentParent):
