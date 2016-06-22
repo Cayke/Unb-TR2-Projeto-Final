@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 import json
-import callbacksServerRequest as CK
 
 # Envio de mensagens ao servidor
 def countFiles():
@@ -21,7 +20,7 @@ def countNodes():
 def newDir(name, path):
 	print "Novo diretório"
 
-def sendFile(file):
+def sendFile(path, file):
 	print "Enviar arquivo"
 
 def renameDir(newName, path):
@@ -35,3 +34,6 @@ def removeDir(path):
 
 def removeFile(name, path):
 	print "Arquivo removido: " + name
+
+def downloadFile(path):
+	print path

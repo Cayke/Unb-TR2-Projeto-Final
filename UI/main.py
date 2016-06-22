@@ -18,7 +18,8 @@ class UIServer:
             (r'login/?$',self.login),
             (r'filesStructure/?$',self.fileStructure),
             (r'filePage/?(.*)',self.filePage),
-            (r'dirPage/?(.*)',self.dirPage),]
+            (r'dirPage/?(.*)',self.dirPage),
+            (r'donwload/?(.*)',self.downloadFile)]
         print "Listening on port 8000...."
         server=simple_server.make_server('', 8000, self.app)
         server.serve_forever()
@@ -29,7 +30,6 @@ class UIServer:
         return ['Not Found']
 
     def login(self,env,resp):
-        # resp('200 OK', [('Content-type', 'text/html')])
         if env['REQUEST_METHOD'] == 'POST':
             post_env = env.copy()
             post_env['QUERY_STRING'] = ''
@@ -76,6 +76,10 @@ class UIServer:
         dirPage = dirPage.replace("#PATH#",env['PATH_INFO']) 
         return [dirPage]
 
+    def downloadFile(self,env,resp):
+        file = getServerRequests.downloadFile()
+# TODO: Present file
+
     def static_app(self,env, resp):
         """Serve static files from the directory named
         in STATIC_FILES"""
@@ -105,7 +109,4 @@ class UIServer:
             
         return self.not_found(env, resp)
 
-UIServer()
-
-
-    
+UIServer()    
