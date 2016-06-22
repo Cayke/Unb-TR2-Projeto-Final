@@ -3,7 +3,7 @@ import json
 
 # Envio de mensagens ao servidor
 def getServerInfo():
-	print "Descobrir número de arquivos, quantidade de dados e número de users conectados"
+	return "Descobrir número de arquivos, quantidade de dados e número de users conectados"
 
 def totalUsedSize():
 	print "Quantidade de dados utilziada"
@@ -36,4 +36,6 @@ def removeFile(name, path):
 	print "Arquivo removido: " + name
 
 def downloadFile(path):
+	file = open('templates/teste.txt','r').read()
 	print path
+	return file

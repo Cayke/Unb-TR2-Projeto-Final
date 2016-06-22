@@ -1,7 +1,7 @@
+from tempfile import TemporaryFile
 from wsgiref.util import setup_testing_defaults
 from wsgiref import simple_server
-import cgi
-import re
+import cgi, re
 import getServerRequests
 import UIGenerator
 import json
@@ -16,6 +16,8 @@ class UIServer:
     def __init__(self):
         self.urls = [(r'^$',self.main),
             (r'login/?$',self.login),
+            (r'uploadFile/?$',self.uploadFile),
+            (r'dirPage/serverInfo/?$',self.serverInfo),
             (r'filesStructure/?$',self.fileStructure),
             (r'filePage/?(.*)',self.filePage),
             (r'dirPage/?(.*)',self.dirPage),
@@ -29,7 +31,6 @@ class UIServer:
         """Called if no URL matches."""
         start_response('404 NOT FOUND', [('Content-Type', 'text/plain')])
         return ['Not Found']
-
 
 #MARK: Login
     def main(self,env,resp):
@@ -70,15 +71,38 @@ class UIServer:
 
 #MARK: Dir operations
     def dirPage(self,env,resp):
-        resp('200 OK', [('Content-type', 'text/html')])
         dirPage = open('templates/dirPage.html','r').read()
         dirPage = dirPage.replace("#PATH#",env['PATH_INFO']) 
+        dirName = dirPage.split('/')[-1]
+        query_string = env['QUERY_STRING']
+        action = query_string.split('=')[-1]
+        if action == "Delete":
+            getServerRequests.removeFile(dirName,dirPage)
+            return self.fileStructure(env,resp)
+        resp('200 OK', [('Content-type', 'text/html')])
         return [dirPage]
-        return [html]
+
+    def uploadFile(self,env,resp):
+        body = self.readUploadFile(env)
+        form = cgi.FieldStorage(fp=body, environ=env, keep_blank_values=True)
+        print form
+        return self.fileStructure(env,resp)
+    
+    def readUploadFile(self,env):
+        length = int(env.get('CONTENT_LENGTH', 0))
+        stream = env['wsgi.input']
+        body = TemporaryFile(mode='w+b')
+        while length > 0:
+            part = stream.read(min(length, 1024*200)) # 200KB buffer size
+            if not part: break
+            body.write(part)
+            length -= len(part)
+        body.seek(0)
+        env['wsgi.input'] = body
+        return body
 
 #MARK: FILES OPERATIOS
     def filePage(self,env,resp):
-        resp('200 OK', [('Content-type', 'text/html')])
         filePage = open('templates/filePage.html','r').read()
         filePath = env['PATH_INFO'].strip("/filePage")
         fileName = filePath.split('/')[-1]
@@ -87,14 +111,23 @@ class UIServer:
         query_string = env['QUERY_STRING']
         action = query_string.split('=')[-1]
         if action == "Download":
-            self.downloadFile(filePath)
+            return self.downloadFile(filePath,resp)
         elif action == "Delete":
-            print  "Delete"
+            getServerRequests.removeFile(fileName,filePath)
+            return self.fileStructure(env,resp)
+        resp('200 OK', [('Content-type', 'text/html')])
         return [filePage]
 
-    def downloadFile(self,filePath):
-        getServerRequests.downloadFile(filePath)
-        
+    def downloadFile(self,filePath, resp):
+        file = getServerRequests.downloadFile(filePath)
+        resp('200 OK', [('Content-type', 'text/pain')])
+        return [file]
+
+#MARK: Server info
+    def serverInfo(self,env,resp):
+        info = getServerRequests.getServerInfo()
+        resp('200 OK', [('Content-type', 'text/pain')])
+        return [info]
 
 #MARK: Static folder reading
     def static_app(self,env, resp):
