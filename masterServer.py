@@ -28,11 +28,13 @@ class MasterServer(object):
     def clientConnected(self, socketTCPThread, client):
         while True:
             try:
+                socketTCPThread.settimeout(30)
                 data = socketTCPThread.recv(2048)
                 request = json.loads(data)
                 self.getRequestStatus(request,socketTCPThread,client)
             except:
                 socketTCPThread.close()
+                self.DHT.logOutUser(client)
                 return False
 
     def getRequestStatus(self, request, socketTCP, client):
@@ -57,8 +59,7 @@ class MasterServer(object):
             self.sendDirectoriesTree(socketTCP)
 
         elif type == 'infofiles':
-            #todo
-            pass
+            self.infoFiles(request,socketTCP, client)
 
         elif type == 'createdir':
             self.createDir(request,socketTCP, client)
@@ -113,7 +114,14 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
     def userStillActive(self, request, socketTCP, client):
-        pass # todo implementar timer da conexao user
+        if self.DHT.getIDForIPPort(client):
+            response = dict(responseStatus = 'SUCCESS')
+            responseJSON = json.dumps(response)
+            socketTCP.send(responseJSON)
+        else:
+            response = dict(responseStatus = 'ERROR', message = 'you_are_not_logged')
+            responseJSON = json.dumps(response)
+            socketTCP.send(responseJSON)
 
     def uploadFile(self, request, socketTCP, client):
         path = request['path']
@@ -149,13 +157,22 @@ class MasterServer(object):
         id = self.DHT.getUserResponsableForFile(hash)
 
         if self.DHT.checkIfUserActive(id):
-            response = dict(responseStatus = 'SUCCESS', node = self.DHT.getIPPortForID(id), hashName = hash)
+            response = dict(responseStatus = 'SUCCESS', type = 'node', node = self.DHT.getIPPortForID(id), hashName = hash)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
         else:
             request.update(hash = hash)
             self.sendFileToUser(request,socketTCP, client)
+
+    def infoFiles(self, request,socketTCP, client):
+        response = dict(responseStatus = 'SUCCESS',
+                        numberOfFiles = self.DHT.getNumberOfFiles,
+                        capacityOfSystem = self.DHT.getCapacityOfSystem,
+                        filesDistribution = self.DHT.getFilesDistribution,
+                        activeNodes = self.DHT.getActiveNodes)
+        responseJSON = json.dumps(response)
+        socketTCP.send(responseJSON)
 
     def createDir(self, request, socketTCP, client):
         path = request['path']

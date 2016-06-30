@@ -38,7 +38,9 @@ class DHT (object):
         self.test()
 
     def test(self):
-        print self.getLocalPathForPath('/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/images/behealthy2.jpg')
+        print self.getNumberOfFiles()
+        print self.getCapacityOfSystem()
+        print self.getFilesDistribution()
 
     def registerUser(self, username, client):
         if (self.checkIfUsernameAlreadyAlloced(username) == False):
@@ -68,6 +70,12 @@ class DHT (object):
                 return id
         return -1
 
+    def logOutUser(self, client):
+        for (id, Client) in self.arrayWithActiveNodes:
+            if client == Client:
+                self.arrayWithActiveNodes.remove((id,client))
+                break
+
     def getHashForPath(self, path):
         path = self.getLocalPathForPath(path)
         md5 = hashlib.md5()
@@ -86,6 +94,10 @@ class DHT (object):
             return os.path.join(self.workingPath, path)
         else:
             return path
+
+    def getOutsidePathForPath(self, path):
+        localPath = os.path.join(self.workingPath)
+        return path.replace(localPath, '')
 
     def getRootFromPath(self, path):
         root = path
@@ -241,9 +253,6 @@ class DHT (object):
 
     # retorna um dicionario contendo {type: dir ou file, name: nome do mesmo, list: [dicts] contendo o que esta dentro dele
     def getDirectioriesTree(self):
-        # dictionaryTreePath = self.getDirectoriesTreeForPath(self.rootFolder)
-        # string = json.dumps(dictionaryTreePath)
-        # print string
         return self.getDirectoriesTreeForPath(self.rootFolder)
 
     def getDirectoriesTreeForPath(self, path):
@@ -328,4 +337,37 @@ class DHT (object):
         #todo  enviar para o usuario
         pass
 
+    #retorna numero de arquivos
+    def getNumberOfFiles(self):
+        numberOfFiles = 0
+        for (dirpath, dirnames, filenames) in os.walk(os.path.join(self.workingPath, self.maskWorkingPath)):
+            try:
+                filenames.remove('.DS_Store')
+            except:
+                pass
+            numberOfFiles = numberOfFiles + len(filenames)
+        return numberOfFiles
 
+    #retorna tamanho em bytes
+    def getCapacityOfSystem(self):
+        total_size = 0
+        for dirpath, dirnames, filenames in os.walk(os.path.join(self.workingPath, self.maskWorkingPath)):
+            for f in filenames:
+                fp = os.path.join(dirpath, f)
+                total_size += os.path.getsize(fp)
+        return total_size
+
+    def getFilesDistribution(self):
+        array = []
+        for (path, hash) in self.arrayWithHashAndPath:
+            userID = self.getUserResponsableForFile(hash)
+            username = self.getUsernameForID(userID)
+            outPath = self.getOutsidePathForPath(path)
+            array.append(dict(file = outPath, username = username))
+        return array
+
+    def getActiveNodes(self):
+        array = []
+        for (id, client) in self.arrayWithActiveNodes:
+            array.append(self.getUsernameForID(id))
+        return array
