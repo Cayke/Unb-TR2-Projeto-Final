@@ -1,8 +1,10 @@
 from random import randint
 import os
-import json
+import hashlib
+import base64
 
 class DHT (object):
+    MAX_NODES = 0
     # Array responsavel por gerenciar os ids disponiveis.
     arrayWithEmptyIDs = [] # [ids]
 
@@ -17,12 +19,13 @@ class DHT (object):
     rootFolder = ''
 
     def __init__(self, k):
+        self.MAX_NODES = k
         for i in range(0, k):
             self.arrayWithEmptyIDs.append(i)
 
         self.createProgramPath()
-        print self.rootFolder
-        self.createDir('/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/huebr', 'teste')
+
+        self.getBase64StringForFileWithHash('')
 
     def registerUser(self, username, client):
         if (self.checkIfUsernameAlreadyAlloced(username) == False):
@@ -52,16 +55,33 @@ class DHT (object):
         return -1
 
     def getHashForPath(self, path):
+        md5 = hashlib.md5()
+        md5.update(path)
+        return md5.hexdigest()
+
+    def convertHashToInt(self, hash):
+        value = 0
+        for x in range(0, len(hash)):
+            value += ord(hash[x])
+        return value%self.MAX_NODES
+
+    def getFilePathForHash(self, hash):
         #todo
-        return ''
+        return '/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/huebr/miojo.png'
 
     def getUserResponsableForFile(self, hash):
         #todo ver usuario responsavel pelo hash
         return 0
 
     def getBase64StringForFileWithHash(self, hash):
-        #todo get file with hash
-        return ''
+        path = self.getFilePathForHash(hash)
+        with open(path, 'rb') as f:
+            data = f.read()
+            return base64.b64encode(data)
+
+    def saveBase64ToPath(self, path, b64String):
+        with open(path, 'wb') as f:
+            f.write(base64.b64decode(b64String))
 
     def checkIfUserActive(self, id):
         # todo ver se usuario ativo
