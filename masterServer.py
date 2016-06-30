@@ -53,8 +53,7 @@ class MasterServer(object):
             self.downloadFile(request,socketTCP, client)
 
         elif type == 'dirinfo':
-            #todo
-            pass
+            self.sendDirectoriesTree(socketTCP)
 
         elif type == 'infofiles':
             #todo
@@ -228,5 +227,11 @@ class MasterServer(object):
 
     def sendFilesForUser(self, socketTCP, files):
         response = dict(type = 'dhtfiles', files = files)
+        responseJSON = json.dumps(response)
+        socketTCP.send(responseJSON)
+
+    def sendDirectoriesTree(self, socketTCP):
+        dictTree = self.DHT.getDirectioriesTree()
+        response = [dictTree]
         responseJSON = json.dumps(response)
         socketTCP.send(responseJSON)

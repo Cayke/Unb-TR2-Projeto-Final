@@ -21,9 +21,8 @@ class DHT (object):
             self.arrayWithEmptyIDs.append(i)
 
         self.createProgramPath()
-       # dictionaryTreePath = self.getDirectoriesTreeForPath(self.rootFolder)
-       # string = json.dumps(dictionaryTreePath)
-       # print string
+        print self.rootFolder
+        self.createDir('/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/huebr', 'teste')
 
     def registerUser(self, username, client):
         if (self.checkIfUsernameAlreadyAlloced(username) == False):
@@ -73,24 +72,50 @@ class DHT (object):
         return ('localhost', 5000)
 
     def createDir(self, path, dirName):
-        # todo
-        return True
+        newFolder = os.path.join(path, dirName)
+        try:
+            os.makedirs(newFolder)
+            return True
+        except:
+            return False
 
     def renameDir(self, path, newDirName):
-        # todo
-        return True
+        directory = os.path.dirname(path)
+        newPath = os.path.join(directory, newDirName)
+        try:
+            os.rename(path, newPath)
+            return True
+        except:
+            return False
 
     def removeDir(self, path):
-        # todo
-        return True
+        for root, dirs, files in os.walk(path, topdown=False):
+            for name in files:
+                os.remove(os.path.join(root, name))
+            for name in dirs:
+              os.rmdir(os.path.join(root, name))
+        try:
+            os.rmdir(path)
+            return True
+        except:
+            return False
 
     def removeFile(self, path):
-        # todo
-        return True
+        try:
+            os.remove(path)
+            return True
+        except:
+            return False
+
 
     def renameFile(self, path, newFileName):
-        # todo
-        return True
+        directory = os.path.dirname(path)
+        newPath = os.path.join(directory, newFileName)
+        try:
+            os.rename(path, newPath)
+            return True
+        except:
+            return False
 
     def createProgramPath(self):
         self.rootFolder = os.path.join(self.workingPath, self.maskWorkingPath)
@@ -98,7 +123,12 @@ class DHT (object):
             os.makedirs(self.rootFolder)
 
     # retorna um dicionario contendo {type: dir ou file, name: nome do mesmo, list: [dicts] contendo o que esta dentro dele
-    #todo falta tirar o workingpath dos name = dirpath
+    def getDirectioriesTree(self):
+        # dictionaryTreePath = self.getDirectoriesTreeForPath(self.rootFolder)
+        # string = json.dumps(dictionaryTreePath)
+        # print string
+        return self.getDirectoriesTreeForPath(self.rootFolder)
+
     def getDirectoriesTreeForPath(self, path):
         for (dirpath, dirnames, filenames) in os.walk(path):
             try:
