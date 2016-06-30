@@ -5,7 +5,7 @@ from dht import DHT
 
 class MasterServer(object):
     HOST = ''
-    PORT = 5000
+    PORT = 50005
     DHT = DHT(50)
 
     def __init__(self):
