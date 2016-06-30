@@ -35,3 +35,50 @@ class DHT (object):
             if (username == uName):
                 return True
         return False
+
+    def logUser(self, username, client):
+        for (uName, id) in self.arrayWithAllocedIDs:
+            if (username == uName):
+                self.arrayWithActiveNodes.append((id, client))
+                return id
+        return -1
+
+    def getHashForPath(self, path):
+        #todo
+        return ''
+
+    def getUserResponsableForFile(self, hash):
+        #todo ver usuario responsavel pelo hash
+        return 0
+
+    def getBase64StringForFileWithHash(self, hash):
+        #todo get file with hash
+        return ''
+
+    def checkIfUserActive(self, id):
+        # todo ver se usuario ativo
+        return True
+
+    def getIPPortForID(self, id):
+        # todo pegar ip porta
+        return ('localhost', 5000)
+
+    def createDir(self, path, dirName):
+        # todo
+        return True
+
+    def renameDir(self, path, newDirName):
+        # todo
+        return True
+
+    def removeDir(self, path):
+        # todo
+        return True
+
+    def removeFile(self, path):
+        # todo
+        return True
+
+    def renameFile(self, path, newFileName):
+        # todo
+        return True
