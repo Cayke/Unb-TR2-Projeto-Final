@@ -2,21 +2,31 @@ from random import randint
 import os
 import hashlib
 import base64
+import sys
+import masterServer
 
 class DHT (object):
+    MasterServer = None
     MAX_NODES = 0
+    workingPath = os.getcwd()
+    maskWorkingPath = 'CFICloud'
+    rootFolder = ''
+
     # Array responsavel por gerenciar os ids disponiveis.
     arrayWithEmptyIDs = [] # [ids]
 
     # Array responsavel por gerenciar os ids alocados.
     arrayWithAllocedIDs = [] # [(username, id)]
 
-    # Array com os nos ativos
+    # Array com os nos ativos no momento
     arrayWithActiveNodes = [] # [(id,(ip,port))]
 
-    workingPath = os.getcwd()
-    maskWorkingPath = 'CFICloud'
-    rootFolder = ''
+    # Array com os hashs dos arquivos salvos
+    arrayWithHashAndPath = [] # [(path, hash)]
+
+    # Array com ids e hashs
+    arrayWithNodesResponsablesForHash = [] #[(id, hash)]
+
 
     def __init__(self, k):
         self.MAX_NODES = k
@@ -25,7 +35,10 @@ class DHT (object):
 
         self.createProgramPath()
 
-        self.getBase64StringForFileWithHash('')
+        self.test()
+
+    def test(self):
+        print self.getLocalPathForPath('/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/images/behealthy2.jpg')
 
     def registerUser(self, username, client):
         if (self.checkIfUsernameAlreadyAlloced(username) == False):
@@ -51,10 +64,12 @@ class DHT (object):
         for (uName, id) in self.arrayWithAllocedIDs:
             if (username == uName):
                 self.arrayWithActiveNodes.append((id, client))
+                self.sendFilesToUser(id)
                 return id
         return -1
 
     def getHashForPath(self, path):
+        path = self.getLocalPathForPath(path)
         md5 = hashlib.md5()
         md5.update(path)
         return md5.hexdigest()
@@ -65,13 +80,29 @@ class DHT (object):
             value += ord(hash[x])
         return value%self.MAX_NODES
 
+    def getLocalPathForPath(self, path):
+        root = self.getRootFromPath(path)
+        if root == self.maskWorkingPath:
+            return os.path.join(self.workingPath, path)
+        else:
+            return path
+
+    def getRootFromPath(self, path):
+        root = path
+        root = root.lstrip(os.sep)
+        return root[:root.index(os.sep)]
+
     def getFilePathForHash(self, hash):
-        #todo
-        return '/OneDrive/unb/TR2/proj final/tr2-trabalhofinal/CFICloud/cayke22/huebr/miojo.png'
+        for (path, Hash) in self.arrayWithHashAndPath:
+            if Hash == hash:
+                return path
+        return None
 
     def getUserResponsableForFile(self, hash):
-        #todo ver usuario responsavel pelo hash
-        return 0
+        for (id, Hash) in self.arrayWithNodesResponsablesForHash:
+            if Hash == hash:
+                return id
+        return -1
 
     def getBase64StringForFileWithHash(self, hash):
         path = self.getFilePathForHash(hash)
@@ -80,18 +111,65 @@ class DHT (object):
             return base64.b64encode(data)
 
     def saveBase64ToPath(self, path, b64String):
+        path = self.getLocalPathForPath(path)
         with open(path, 'wb') as f:
             f.write(base64.b64decode(b64String))
+            return True
+        return False
+
+    def saveFileAtPath(self, path, file, client):
+        path = self.getLocalPathForPath(path)
+        if self.saveBase64ToPath(path, file):
+            self.arrayWithHashAndPath.append((path,self.getHashForPath(path)))
+            self.rebalancing()
+            return True
+        else:
+            return False
+
 
     def checkIfUserActive(self, id):
-        # todo ver se usuario ativo
-        return True
+        if self.getIPPortForID(id) != None:
+            return True
+        else:
+            return False
 
     def getIPPortForID(self, id):
-        # todo pegar ip porta
-        return ('localhost', 5000)
+        # Array com os nos ativos no momento
+        # arrayWithActiveNodes = [] # [(id,(ip,port))]
+        for (ID, client) in self.arrayWithActiveNodes:
+            if id == ID:
+                return client
+        return None
 
-    def createDir(self, path, dirName):
+    def getIDForIPPort(self, client):
+        for (id, Client) in self.arrayWithActiveNodes:
+            if Client == client:
+                return id
+        return None
+
+    def getUsernameForID(self, userID):
+        for (username,id) in self.arrayWithAllocedIDs:
+            if id == userID:
+                return username
+        return None
+
+    def validateIfUserHasAccessToPath(self, path, client):
+        removeLocal = os.path.join(self.workingPath, self.maskWorkingPath)
+        removeLocal = path.replace(removeLocal, '')
+        root = self.getRootFromPath(removeLocal)
+
+        userID = self.getIDForIPPort(client)
+        if self.getUsernameForID(userID) == root:
+            return True
+        else:
+            return False
+
+    def createDir(self, path, dirName, client):
+        path = self.getLocalPathForPath(path)
+
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         newFolder = os.path.join(path, dirName)
         try:
             os.makedirs(newFolder)
@@ -99,7 +177,12 @@ class DHT (object):
         except:
             return False
 
-    def renameDir(self, path, newDirName):
+    def renameDir(self, path, newDirName, client):
+        path = self.getLocalPathForPath(path)
+
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         directory = os.path.dirname(path)
         newPath = os.path.join(directory, newDirName)
         try:
@@ -108,7 +191,12 @@ class DHT (object):
         except:
             return False
 
-    def removeDir(self, path):
+    def removeDir(self, path, client):
+        path = self.getLocalPathForPath(path)
+
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         for root, dirs, files in os.walk(path, topdown=False):
             for name in files:
                 os.remove(os.path.join(root, name))
@@ -120,15 +208,24 @@ class DHT (object):
         except:
             return False
 
-    def removeFile(self, path):
+    def removeFile(self, path, client):
+        path = self.getLocalPathForPath(path)
+
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         try:
             os.remove(path)
             return True
         except:
             return False
 
+    def renameFile(self, path, newFileName, client):
+        path = self.getLocalPathForPath(path)
 
-    def renameFile(self, path, newFileName):
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         directory = os.path.dirname(path)
         newPath = os.path.join(directory, newFileName)
         try:
@@ -150,6 +247,7 @@ class DHT (object):
         return self.getDirectoriesTreeForPath(self.rootFolder)
 
     def getDirectoriesTreeForPath(self, path):
+        path = self.getLocalPathForPath(path)
         for (dirpath, dirnames, filenames) in os.walk(path):
             try:
                 filenames.remove('.DS_Store')
@@ -185,4 +283,49 @@ class DHT (object):
         return dict(type = 'file', name = filename)
 
     def getCurrentDirectoryName(self, fullPath):
+        fullPath = self.getLocalPathForPath(fullPath)
         return os.path.basename(fullPath)
+
+    def rebalancing(self):
+        self.arrayWithNodesResponsablesForHash = []
+        for (path,hash) in self.arrayWithHashAndPath:
+            fileID = self.convertHashToInt(hash)
+            node = self.responsableNodeForFileID(fileID)
+            self.arrayWithHashAndPath.append((node, hash))
+        self.sendHashsToAllNodes()
+
+    def responsableNodeForFileID(self, fileID):
+        # Array responsavel por gerenciar os ids alocados.
+        # arrayWithAllocedIDs = [] # [(username, id)]
+        responsableNode = sys.maxint
+        minNodeValue = sys.maxint
+        for (username, nodeID) in self.arrayWithAllocedIDs:
+            if nodeID == fileID:
+                return nodeID
+            elif nodeID > fileID and nodeID < responsableNode:
+                responsableNode = nodeID
+            elif nodeID < minNodeValue:
+                minNodeValue = nodeID
+
+        if responsableNode == sys.maxint:
+            return minNodeValue
+        else:
+            return responsableNode
+
+
+    def sendHashsToAllNodes(self):
+        for (id, client) in self.arrayWithActiveNodes:
+            self.sendFilesToUser(id, self.getListWithHashesForUserID(id))
+
+    def getListWithHashesForUserID(self, userID):
+        array = []
+        for (id,hash) in self.arrayWithNodesResponsablesForHash:
+            if id == userID:
+                array.append(hash)
+        return array
+
+    def sendFilesToUser(self, userID, listWithHashes):
+        #todo  enviar para o usuario
+        pass
+
+

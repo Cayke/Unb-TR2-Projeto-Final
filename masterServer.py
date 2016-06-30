@@ -9,6 +9,7 @@ class MasterServer(object):
     DHT = DHT(50)
 
     def __init__(self):
+        self.DHT.MasterServer = self
         print "servidor rodando..."
         self.waitForConnection()
 
@@ -86,7 +87,7 @@ class MasterServer(object):
             response = dict(responseStatus = 'SUCCESS', id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
-            # todo fazer o balanceamento
+            self.DHT.rebalancing()
 
         elif (id == -1):
             response = dict(responseStatus = 'ERROR', message = 'dht_overflow')
@@ -117,9 +118,8 @@ class MasterServer(object):
     def uploadFile(self, request, socketTCP, client):
         path = request['path']
         data = request['data']
-        #todo salvar o arquivo
 
-        if(True): #salvou
+        if(self.DHT.saveFileAtPath(path, data, client)): #salvou
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -161,7 +161,7 @@ class MasterServer(object):
         path = request['path']
         dir = request['dirname']
 
-        if self.DHT.createDir(path,dir):
+        if self.DHT.createDir(path,dir,client):
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -175,7 +175,7 @@ class MasterServer(object):
         path = request['path']
         dir = request['newname']
 
-        if self.DHT.renameDir(path,dir):
+        if self.DHT.renameDir(path,dir, client):
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -188,7 +188,7 @@ class MasterServer(object):
     def removeDir(self, request, socketTCP, client):
         path = request['path']
 
-        if self.DHT.removeDir(path):
+        if self.DHT.removeDir(path, client):
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -201,7 +201,7 @@ class MasterServer(object):
     def removeFile(self, request, socketTCP, client):
         path = request['path']
 
-        if self.DHT.removeFile(path):
+        if self.DHT.removeFile(path, client):
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -215,7 +215,7 @@ class MasterServer(object):
         path = request['path']
         newName = request['newname']
 
-        if self.DHT.renameFile(path,newName):
+        if self.DHT.renameFile(path,newName, client):
             response = dict(responseStatus = 'SUCCESS')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
