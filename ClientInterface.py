@@ -7,50 +7,60 @@ import Define
 
 class ClientInterface:
 
-    __IP = '127.0.0.1'   # Server IP
-    __PORTSERVER = 3301  # Server PORT
+    __IP = '192.168.200.179'   # Server IP
+    __PORTSERVER = 5000  # Server PORT
     __PORTCLIENT = 4578  # Client PORT to recive DHT files
     __ID = 1            # ID do usuário
 
     def __init__(self):
-        pass
+        try:
+            self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            dest = (self.__IP, self.__PORTSERVER)
+            #self.tcp.bind(('127.0.0.1', self.__PORTCLIENT))
+            self.tcp.connect(dest)
+        except socket.error as msg:
+            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
+            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Failed to create socket"}'
+            jsonerror = json.loads(error)
+            return jsonerror
 
     # Register a user
     # param: username - The username to register in database
     # return: json {code,msg}
     def __register(self, username):
-        msg = '{"username" : "' + username + '", "type" : ' + str(Define.REGISTER) + ' }'
 
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
+        jsonmsg = dict(username=username, type=Define.REGISTER)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
         jsonresponse = json.loads(response)
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = jsonresponse["id"]
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
+            success = dict(code=Define.SUCCESS, msg='Success')
             return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Register Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=jsonresponse["responseStatus"], msg="Register Error")
+            return error
 
 
     # Login a user
     # param: username - The username to login
     # return: json {code,msg}
     def login(self, username):
-        msg = '{"username" : "' + username + '", "type" : ' + str(Define.LOGIN) + ' }'
 
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
+        jsonmsg = dict(username=username, type=Define.LOGIN)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
         jsonresponse = json.loads(response)
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = int(jsonresponse["id"])
-            success = '{"code" : ' + str(Define.SUCCESS) + ', "msg" :  "Success"}'
+            success = dict(code=Define.SUCCESS, msg='Success')
             return success
         elif int(jsonresponse["responseStatus"]) == Define.USERNOTREGISTER:
             return self.__register(username)
         else:
-            error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Login Error"}'
+            error = dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
             return error
 
 
@@ -62,20 +72,20 @@ class ClientInterface:
     # return: json {code,msg}
     def upload(self, filename, data, path):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
             return error
 
         datab64 = base64.b64encode(data)
-        msg = '{"path" : "' + path + '", "data" : "' + datab64 + '", "type" : ' + str(Define.UPLOAD) + ' }'
-
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
+        jsonmsg = dict(path=path, data=datab64, type=Define.UPLOAD)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
         jsonresponse = json.loads(response)
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
+            success = dict(code=Define.SUCCESS, msg='Success')
             return success
         else:
-            error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Upload Error"}'
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
             return error
 
     # Download file from server
@@ -83,53 +93,53 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE (if success file will be writen in a folder)
     def download(self, path):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
             return error
 
-        msg = '{"type" : ' + str(Define.DOWNLOAD) + ', "method" : "path", "path" : "' + path + '" }'
-
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
+        jsonmsg = dict(method='path', path=path, type=Define.DOWNLOAD)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
         jsonresponse = json.loads(response)
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             if jsonresponse["type"] == 'file':
-                success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "' + base64.b64decode(jsonresponse["data"]) + '"}'
+                success = dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
                 return success
-            elif response["type"] == 'hash':
-                msg = '{"type" : ' + str(Define.DOWNLOAD) + ', "method" : "hash", "hash" : "' + response["hashName"] + '" }'
-                jsonmsg = json.loads(msg)
-                ip, port = response["node"].split(':')
-                response = self.__sendMSG(jsonmsg, ip, port)
+            elif jsonresponse["type"] == 'hash':
+                jsonmsg = dict(method='hash', hash=str(jsonresponse["hashName"]), type=Define.DOWNLOAD)
+                msg = json.dumps(jsonmsg)
+                ip, port = jsonresponse["node"].split(':')
+                response = self.__sendMSG(msg, ip, int(port))
                 jsonresponse = json.loads(response)
-                if jsonresponse["responseStatus"] == Define.SUCCESS:
-                    success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "' + base64.b64decode(jsonresponse["data"]) + '"}'
+                if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
+                    success = dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
                     return success
                 else:
-                    error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Download Error"}'
+                    error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
                     return error
             else:
-                error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Download Error"}'
+                error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
                 return error
 
         else:
-            error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Download Error"}'
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
             return error
 
     def dirinfo(self):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
             return error
 
-        msg = '{"type" : ' + str(Define.DIRINFO) + ' }'
-
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
+        jsonmsg = dict(type=Define.DIRINFO)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
         jsonresponse = json.loads(response)
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" : "' + jsonresponse["dir"] + '"}'
+            success = dict(code=Define.SUCCESS, msg=str(jsonresponse["dir"]))
             return success
         else:
-            error = '{"code" : "' + jsonresponse["responseStatus"] + '", "msg" :  "Upload Error"}'
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
             return error
 
     # Create directory
@@ -138,70 +148,61 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE
     def createdir(self, path, namedir):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+            return error
 
-        msg = '{"path" : ' + path + ', "dirname" : "' + namedir + '", "type" : ' + Define.CREATEDIR + ' }'
-        jsonmsg = json.loads(msg)
+        jsonmsg = dict(path=path, dirname=namedir, type=Define.CREATEDIR)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
 
-        response = self.__sendMSG(jsonmsg, self.__IP, self.__PORTSERVER)
-
-        if response["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
-            jsonsuccess = json.loads(success)
-            return jsonsuccess
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            success = dict(code=Define.SUCCESS, msg='Success')
+            return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Upload Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return error
 
     # Rename directory
     # param: path - The path of the new directory included the directory to rename
     # param: namedir - The  new name of the directory
     # return: SUCCESS/ERROR CODE
-    def renamedir(self, path, namedir):
+    def renamedir(self, path, newnamedir):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+            return error
 
-        msg = '{"path" : ' + path + ', "newname" : "' + namedir + '", "type" : ' + Define.RENAMEDIR + ' }'
-        jsonmsg = json.loads(msg)
+        jsonmsg = dict(path=path, newname=newnamedir, type=Define.RENAMEDIR)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
 
-        response = self.__sendMSG(jsonmsg, self.__IP, self.__PORTSERVER)
-
-        if response["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
-            jsonsuccess = json.loads(success)
-            return jsonsuccess
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            success = dict(code=Define.SUCCESS, msg='Success')
+            return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Upload Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return error
 
     # Remove directory
     # param: path - The path of the new directory included the directory to remove
     # return: SUCCESS/ERROR CODE
     def removedir(self, path):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+            return error
 
-        msg = '{"path" : ' + path + '", "type" : ' + Define.REMOVEDIR + ' }'
-        jsonmsg = json.loads(msg)
+        jsonmsg = dict(path=path, type=Define.REMOVEDIR)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
 
-        response = self.__sendMSG(jsonmsg, self.__IP, self.__PORTSERVER)
-
-        if response["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
-            jsonsuccess = json.loads(success)
-            return jsonsuccess
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            success = dict(code=Define.SUCCESS, msg='Success')
+            return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Upload Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return error
 
     # Rename file
     # param: path - The path of the old file included the file to rename
@@ -209,50 +210,47 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE
     def renamefile(self, path, newname):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+            return error
 
-        msg = '{"path" : ' + path + ', "newname" : "' + newname + '", "type" : ' + str(Define.RENAMEFILE) + ' }'
-        jsonmsg = json.loads(msg)
+        jsonmsg = dict(path=path, newname=newname, type=Define.RENAMEFILE)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
 
-        response = self.__sendMSG(jsonmsg, self.__IP, self.__PORTSERVER)
-
-        if response["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
-            jsonsuccess = json.loads(success)
-            return jsonsuccess
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            success = dict(code=Define.SUCCESS, msg='Success')
+            return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Upload Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return error
 
     # Remove file
     # param: path - The path of the file included the file to remove
     # return: SUCCESS/ERROR CODE
     def removefile(self, path):
         if self.__ID == -1:
-            error = '{"code" : "' + str(Define.USERUNAUTHENTICATED) + '", "msg" :  "Permission denied, unauthenticated user"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+            return error
 
-        msg = '{"path" : ' + path + '", "type" : ' + str(Define.REMOVEFILE) + ' }'
-        jsonmsg = json.loads(msg)
+        jsonmsg = dict(path=path, type=Define.REMOVEFILE)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
 
-        response = self.__sendMSG(jsonmsg, self.__IP, self.__PORTSERVER)
-
-        if response["responseStatus"] == Define.SUCCESS:
-            success = '{"code" : "' + str(Define.SUCCESS) + '", "msg" :  "Success"}'
-            jsonsuccess = json.loads(success)
-            return jsonsuccess
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            success = dict(code=Define.SUCCESS, msg='Success')
+            return success
         else:
-            error = '{"code" : "' + response["responseStatus"] + '", "msg" :  "Upload Error"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return error
+
+    def logout(self):
+        self.tcp.close()
 
     def __sendMSG(self, msg, ip, port):
         try:
-            tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error as msg:
             print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
             error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Failed to create socket"}'
@@ -260,18 +258,30 @@ class ClientInterface:
             return jsonerror
 
         dest = (ip, port)
-        tcp.connect(dest)
 
         try:
-            tcp.send(msg)
+            con.connect(dest)
+            con.send(msg)
         except socket.error:
             # Send failed
             print 'Send failed'
-            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Send failed"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
+            return error
 
-        rtn = tcp.recv(512)
-        tcp.close()
+        rtn = con.recv(2048)
+        con.close()
+
+        return rtn
+
+    def __sendMSGtoserver(self, msg):
+        try:
+            self.tcp.send(msg)
+        except socket.error:
+            # Send failed
+            print 'Send failed'
+            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
+            return error
+
+        rtn = self.tcp.recv(2048)
 
         return rtn
