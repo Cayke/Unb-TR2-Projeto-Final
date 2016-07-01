@@ -2,14 +2,14 @@ import socket
 import threading
 import json
 from dht import DHT
+import Define
 
 class MasterServer(object):
     HOST = ''
-    PORT = 50005
+    PORT = 5000
     DHT = DHT(50)
 
     def __init__(self):
-        self.DHT.MasterServer = self
         print "servidor rodando..."
         self.waitForConnection()
 
@@ -28,52 +28,56 @@ class MasterServer(object):
     def clientConnected(self, socketTCPThread, client):
         while True:
             try:
-                socketTCPThread.settimeout(30)
+                #socketTCPThread.settimeout(60)
                 data = socketTCPThread.recv(2048)
                 request = json.loads(data)
                 self.getRequestStatus(request,socketTCPThread,client)
-            except:
+            except socket.error as msg:
+                print 'Error code: ' + str(msg[0]) + ', Error message: ' + str(msg[1])
                 socketTCPThread.close()
                 self.DHT.logOutUser(client)
+                return False
+            except:
+                print 'ocorreu algum erro desconhecido, matando thread'
                 return False
 
     def getRequestStatus(self, request, socketTCP, client):
         type = request['type']
 
-        if type == 'cadastro':
+        if type == Define.REGISTER:
             self.registerUser(request,socketTCP,client)
 
-        elif type == 'login':
+        elif type == Define.LOGIN:
             self.logUser(request,socketTCP,client)
 
         elif type == 'keepalive':
            self.userStillActive(request,socketTCP,client)
 
-        elif type == 'upload':
+        elif type == Define.UPLOAD:
             self.uploadFile(request,socketTCP, client)
 
-        elif type == 'download':
+        elif type == Define.DOWNLOAD:
             self.downloadFile(request,socketTCP, client)
 
-        elif type == 'dirinfo':
+        elif type == Define.DIRINFO:
             self.sendDirectoriesTree(socketTCP)
 
         elif type == 'infofiles':
             self.infoFiles(request,socketTCP, client)
 
-        elif type == 'createdir':
+        elif type == Define.CREATEDIR:
             self.createDir(request,socketTCP, client)
 
-        elif type == 'renamedir':
+        elif type == Define.RENAMEDIR:
             self.renameDir(request,socketTCP, client)
 
-        elif type == 'removedir':
+        elif type == Define.REMOVEDIR:
             self.removeDir(request,socketTCP, client)
 
-        elif type == 'removefile':
+        elif type == Define.REMOVEFILE:
             self.removeFile(request,socketTCP, client)
 
-        elif type == 'renamefile':
+        elif type == Define.RENAMEFILE:
             self.renameFile(request,socketTCP, client)
 
         else:
@@ -84,18 +88,19 @@ class MasterServer(object):
     def registerUser(self, request, socketTCP, client):
         username = request['username']
         id = self.DHT.registerUser(username, client)
-        if (id >= 0):
-            response = dict(responseStatus = 'SUCCESS', id = id)
+        if id >= 0:
+            #TODO CRIAR PASTA PARA USER
+            response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
             self.DHT.rebalancing()
 
-        elif (id == -1):
+        elif id == -1:
             response = dict(responseStatus = 'ERROR', message = 'dht_overflow')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
-        elif (id == -2):
+        elif id == -2:
             response = dict(responseStatus = 'ERROR', message = 'user_already_registered')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
@@ -103,32 +108,34 @@ class MasterServer(object):
     def logUser(self, request, socketTCP, client):
         username = request['username']
         id = self.DHT.logUser(username, client)
-        if (id >= 0):
-            response = dict(responseStatus = 'SUCCESS', id = id)
+        if id >= 0:
+            response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
-        elif (id == -1):
-            response = dict(responseStatus = 'ERROR', message = 'user_not_found')
+        elif id == -1:
+            response = dict(responseStatus = Define.USERNOTREGISTER, message = 'user_not_found')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
     def userStillActive(self, request, socketTCP, client):
-        if self.DHT.getIDForIPPort(client):
-            response = dict(responseStatus = 'SUCCESS')
-            responseJSON = json.dumps(response)
-            socketTCP.send(responseJSON)
-        else:
-            response = dict(responseStatus = 'ERROR', message = 'you_are_not_logged')
-            responseJSON = json.dumps(response)
-            socketTCP.send(responseJSON)
+        pass
+        # if self.DHT.getIDForIPPort(client):
+        #     response = dict(responseStatus = Define.SUCCESS)
+        #     responseJSON = json.dumps(response)
+        #     socketTCP.send(responseJSON)
+        # else:
+        #     response = dict(responseStatus = Define.USERUNAUTHENTICATED, message = 'you_are_not_logged')
+        #     responseJSON = json.dumps(response)
+        #     socketTCP.send(responseJSON)
 
     def uploadFile(self, request, socketTCP, client):
-        path = request['path']
-        data = request['data']
+        path = str(request['path'])
+        data = str(request['data'])
 
-        if(self.DHT.saveFileAtPath(path, data, client)): #salvou
-            response = dict(responseStatus = 'SUCCESS')
+        #todo conferir se path e valido, caso nao seja, retornar erro
+        if self.DHT.saveFileAtPath(path, data, client): #salvou
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -147,7 +154,7 @@ class MasterServer(object):
     def sendFileToUser(self, request, socketTCP, client):
         hash = request['hash']
         file = self.DHT.getBase64StringForFileWithHash(hash)
-        response = dict(responseStatus = 'SUCCESS', type = 'file', data = file)
+        response = dict(responseStatus = Define.SUCCESS, type = 'file', data = file)
         responseJSON = json.dumps(response)
         socketTCP.send(responseJSON)
 
@@ -157,7 +164,7 @@ class MasterServer(object):
         id = self.DHT.getUserResponsableForFile(hash)
 
         if self.DHT.checkIfUserActive(id):
-            response = dict(responseStatus = 'SUCCESS', type = 'node', node = self.DHT.getIPPortForID(id), hashName = hash)
+            response = dict(responseStatus = Define.SUCCESS, type = 'node', node = self.DHT.getIPPortForID(id), hashName = hash)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -166,7 +173,7 @@ class MasterServer(object):
             self.sendFileToUser(request,socketTCP, client)
 
     def infoFiles(self, request,socketTCP, client):
-        response = dict(responseStatus = 'SUCCESS',
+        response = dict(responseStatus = Define.SUCCESS,
                         numberOfFiles = self.DHT.getNumberOfFiles,
                         capacityOfSystem = self.DHT.getCapacityOfSystem,
                         filesDistribution = self.DHT.getFilesDistribution,
@@ -176,10 +183,9 @@ class MasterServer(object):
 
     def createDir(self, request, socketTCP, client):
         path = request['path']
-        dir = request['dirname']
 
-        if self.DHT.createDir(path,dir,client):
-            response = dict(responseStatus = 'SUCCESS')
+        if self.DHT.createDir(path,client):
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -193,7 +199,7 @@ class MasterServer(object):
         dir = request['newname']
 
         if self.DHT.renameDir(path,dir, client):
-            response = dict(responseStatus = 'SUCCESS')
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -206,7 +212,7 @@ class MasterServer(object):
         path = request['path']
 
         if self.DHT.removeDir(path, client):
-            response = dict(responseStatus = 'SUCCESS')
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -219,7 +225,7 @@ class MasterServer(object):
         path = request['path']
 
         if self.DHT.removeFile(path, client):
-            response = dict(responseStatus = 'SUCCESS')
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -233,7 +239,7 @@ class MasterServer(object):
         newName = request['newname']
 
         if self.DHT.renameFile(path,newName, client):
-            response = dict(responseStatus = 'SUCCESS')
+            response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -242,13 +248,18 @@ class MasterServer(object):
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
-    def sendFilesForUser(self, socketTCP, files):
+    @staticmethod
+    def sendFilesForUser(userID, ip, files):
+        socketTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        dest = (ip, 5000 + userID)
+        socketTCP.connect(dest)
+
         response = dict(type = 'dhtfiles', files = files)
         responseJSON = json.dumps(response)
         socketTCP.send(responseJSON)
 
     def sendDirectoriesTree(self, socketTCP):
         dictTree = self.DHT.getDirectioriesTree()
-        response = [dictTree]
+        response = dict(responseStatus = Define.SUCCESS, tree =[dictTree])
         responseJSON = json.dumps(response)
         socketTCP.send(responseJSON)

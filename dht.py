@@ -6,7 +6,6 @@ import sys
 import masterServer
 
 class DHT (object):
-    MasterServer = None
     MAX_NODES = 0
     workingPath = os.getcwd()
     maskWorkingPath = 'CFICloud'
@@ -35,7 +34,7 @@ class DHT (object):
 
         self.createProgramPath()
 
-        self.test()
+        #self.test()
 
     def test(self):
         print self.getNumberOfFiles()
@@ -91,6 +90,7 @@ class DHT (object):
     def getLocalPathForPath(self, path):
         root = self.getRootFromPath(path)
         if root == self.maskWorkingPath:
+            path = path[1:]
             return os.path.join(self.workingPath, path)
         else:
             return path
@@ -125,7 +125,8 @@ class DHT (object):
     def saveBase64ToPath(self, path, b64String):
         path = self.getLocalPathForPath(path)
         with open(path, 'wb') as f:
-            f.write(base64.b64decode(b64String))
+            data = base64.b64decode(b64String)
+            f.write(data)
             return True
         return False
 
@@ -176,15 +177,14 @@ class DHT (object):
         else:
             return False
 
-    def createDir(self, path, dirName, client):
+    def createDir(self, path, client):
         path = self.getLocalPathForPath(path)
 
         if not self.validateIfUserHasAccessToPath(path, client):
             return False
 
-        newFolder = os.path.join(path, dirName)
         try:
-            os.makedirs(newFolder)
+            os.makedirs(path)
             return True
         except:
             return False
@@ -334,8 +334,8 @@ class DHT (object):
         return array
 
     def sendFilesToUser(self, userID, listWithHashes):
-        #todo  enviar para o usuario
-        pass
+        (ip, port) = self.getIPPortForID(userID)
+        masterServer.MasterServer.sendFilesForUser(userID, ip, listWithHashes)
 
     #retorna numero de arquivos
     def getNumberOfFiles(self):
