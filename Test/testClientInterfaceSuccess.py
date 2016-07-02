@@ -19,65 +19,73 @@ class TestClientMethods(unittest.TestCase):
         self.assertEqual(int(rtnjson["code"]), Define.SUCCESS)
         self.assertEquals(rtnjson["msg"], 'Success')
 
+
+    #unittest.skip("demonstrating skipping")#PASS
     def test_registerlogin_success(self):
         rtn = client.login('test')
         # rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEquals(rtn["msg"], 'Success')
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#PASS
     def test_upload_success(self):
-        datab64 = base64.b64encode('abcdefghijklmnopqrstuwxyz')
-        rtn = client.upload('test.txt', datab64, '/')
+        rtn = client.upload('abcdefghijklmnopqrstuwxyz', '/CFICloud/test/test.txt')
         # rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEquals(rtn["msg"], 'Success')
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#pass
     def test_downloadfile_success(self):
-        rtn = client.download('/')
+        client.login('test')
+        client.upload('abcdefghijklmnopqrstuwxyz', '/CFICloud/test/test.txt')
+        rtn = client.download('/CFICloud/test/test.txt')
         # rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEquals(rtn["msg"], 'abcdefghijklmnopqrstuwxyz')
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#PASS
     def test_dirinfo_success(self):
         rtn = client.dirinfo()
         # rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
-        self.assertEqual(rtn["msg"], "/")
+        #self.assertEqual(rtn["msg"], "/")
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#PASS
     def test_createdir_success(self):
-        rtn = client.createdir('/', "test")
+        client.login('test')
+        rtn = client.createdir('/CFICloud/test/', "1")
         #rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#pass
     def test_renamedir_success(self):
-        rtn = client.renamedir('/', "test")
+        client.login('test')
+        rtn = client.renamedir('/CFICloud/test/abc/', "def")
         #rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#PASS
     def test_removedir_success(self):
-        rtn = client.removedir('/')
+        client.login('test')
+        rtn = client.removedir('/CFICloud/test/def/')
         #rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#PASS
     def test_renamefile_success(self):
-        rtn = client.renamefile('/', 'test')
+        client.login('test')
+        rtn = client.renamefile('/CFICloud/test/test.txt', 'test2.txt')
         #rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
 
-    @unittest.skip("demonstrating skipping")
+    @unittest.skip("demonstrating skipping")#pass
     def test_removefile_success(self):
-        rtn = client.removefile('/')
+        client.login('test')
+        rtn = client.removefile('/CFICloud/test/test2.txt')
         #rtnjson = json.loads(rtn)
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
