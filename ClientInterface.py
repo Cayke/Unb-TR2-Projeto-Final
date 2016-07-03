@@ -13,7 +13,7 @@ class ClientInterface:
 
     __IP = '10.32.3.65'   # Server IP
     __PORTSERVER = 5000  # Server PORT
-    __PORTCLIENT = 4578  # Client PORT to recive DHT files
+    __PORTCLIENT = 6000  # Client PORT to recive DHT files
     __ID = -1            # ID do usuário
     __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     __username = ''
@@ -131,10 +131,11 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             if jsonresponse["type"] == 'file':
                 return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
-            elif jsonresponse["type"] == 'hash':
+            elif jsonresponse["type"] == 'node':
                 jsonmsg = dict(method='hash', hash=str(jsonresponse["hashName"]), type=Define.DOWNLOAD)
                 msg = json.dumps(jsonmsg)
-                ip, port = jsonresponse["node"].split(':')
+                ip = jsonresponse["node"][0]
+                port = jsonresponse["node"][1]
                 response = self.__sendMSG(msg, ip, int(port))
                 try:
                     jsonresponse = json.loads(response)
@@ -395,7 +396,7 @@ class ClientInterface:
 
         tcpdht = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         ip = socket.gethostbyname(socket.gethostname())
-        tupla = (ip, self.__PORTSERVER + self.__ID)
+        tupla = (ip, self.__PORTCLIENT + self.__ID)
         tcpdht.bind(tupla)
         tcpdht.listen(2)
 
