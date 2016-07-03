@@ -9,6 +9,7 @@ import time
 import threading
 
 
+
 class ClientInterface:
 
     __IP = '127.0.0.1'   # Server IP
@@ -40,8 +41,8 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = jsonresponse["id"]
             self.__username = username
-            #if not self.__th.isAlive():
-                #self.__th.start()
+            if not self.__th.isAlive():
+                self.__th.start()
             return dict(code=Define.SUCCESS, msg='Success')
         else:
             return dict(code=jsonresponse["responseStatus"], msg="Register Error")
@@ -79,8 +80,8 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = int(jsonresponse["id"])
             self.__username = username
-            #if not self.__th.isAlive():
-                #self.__th.start()
+            if not self.__th.isAlive():
+                self.__th.start()
             return dict(code=Define.SUCCESS, msg='Success')
         elif int(jsonresponse["responseStatus"]) == Define.USERNOTREGISTER:
             return self.__register(username)
@@ -404,14 +405,14 @@ class ClientInterface:
 
         while True:
             con, cliente = tcpdht.accept()
-            msg = con.recv(1024)
+            msg = con.recv(2048)
             jsonmsg = json.loads(msg)
 
             if jsonmsg['type'] == Define.DHTFILES:
                 array = jsonmsg['files']
-                filepath = directory + '/' + jsonmsg['Hash']
-                with open(filepath, 'wb') as f:
-                    for index in range(len(array)):
+                for index in range(len(array)):
+                    filepath = directory + '/' + array[index]
+                    with open(filepath, 'wb') as f:
                         rtn = self.__downloadserverhash(array[index])
                         jsonrtn = json.loads(rtn)
                         f.write(base64.b64decode(jsonrtn['data']))
