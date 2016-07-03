@@ -1,0 +1,27 @@
+<html>
+<title>Dir options</title>
+<body>
+<B>Directory Path:</B> #PATH#
+<P>
+<form method=POST>
+    <B>Enter new dir name:</B>
+    <input type=text name=newName>
+    <input type=submit>
+</form>
+
+<form method=POST>
+    <B>Create new dir:</B>
+    <input type=text name=newDir>
+    <input type=submit>
+</form>
+
+<form enctype="multipart/form-data" method=POST action="/uploadFile">
+	<B>Upload File to directory</B>
+	<input type="file" name="text" accept=".txt">
+	<input type="submit">
+</form>
+<form method=POST>
+	<B> Delete directory</B>
+	<input type="submit" name=delete>
+</form>
+</body></html>
