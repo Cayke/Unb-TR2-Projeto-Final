@@ -131,6 +131,7 @@ class DHT (object):
         return False
 
     def saveFileAtPath(self, path, file, client):
+        path = self.getLocalPathForPath(path)
         if not self.validateIfUserHasAccessToPath(path, client):
             return False
 

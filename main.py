@@ -17,9 +17,9 @@ class UIServer:
         self.urls = [(r'^$',self.main),
             (r'login/?$',self.login),
             (r'uploadFile/?$',self.uploadFile),
-            (r'dirPage/serverInfo/?$',self.serverInfo),
             (r'filesStructure/?$',self.fileStructure),
             (r'filePage/?(.*)',self.filePage),
+            (r'serverInfo/?(.*)',self.serverInfo),
             (r'dirPage/?(.*)',self.dirPage),
             (r'donwload/?(.*)',self.downloadFile)]
 
@@ -78,14 +78,6 @@ class UIServer:
         resp('200 OK', [('Content-type', 'text/html')])
         return html
 
-    def newDir(self,env,resp):
-        if (self.serverRequests.newDir(env,resp)):
-            resp('200 OK', [('Content-type', 'text/html')])
-            return self.fileStructure(env,resp)
-        else:
-            return self.errorScreen(env,resp)
-
-
 #MARK: Dir operations
     def dirPage(self,env,resp):
         if env['REQUEST_METHOD'] == 'POST':
@@ -96,29 +88,23 @@ class UIServer:
                 environ=post_env,
                 keep_blank_values=True
             )
+            path = env['PATH_INFO'].split('dirPage')[1]
             if 'newDir' in post.keys():
                 newDir = post['newDir'].value
-                if self.serverRequests.newDir(newDir, env['PATH_INFO']):
+                if self.serverRequests.newDir(newDir, path):
                     return self.fileStructure(env, resp)
-                else:
-                    return self.errorScreen(env, resp)
             elif 'newName' in post.keys():
                 newName = post['newName'].value
-                if self.serverRequests.renameDir(newName, env['PATH_INFO']):
+                if self.serverRequests.renameDir(newName, path):
                     return self.fileStructure(env, resp)
-                else:
-                    return self.errorScreen(env, resp)
+            elif 'delete' in post.keys():
+                if self.serverRequests.removeDir(path):
+                    return self.fileStructure(env, resp)
+            return self.errorScreen(env, resp)
         else:
             dirPage = open('templates/dirPage.html','r').read()
             dirPage = dirPage.replace("#PATH#",env['PATH_INFO'])
-            dirName = dirPage.split('/')[-1]
             query_string = env['QUERY_STRING']
-            action = query_string.split('=')[-1]
-            if action == "Delete":
-                if self.serverRequests.removeFile(dirName,dirPage):
-                    return self.fileStructure(env,resp)
-                else:
-                    return self.errorScreen(env,resp)
             resp('200 OK', [('Content-type', 'text/html')])
             return [dirPage]
 
@@ -126,9 +112,15 @@ class UIServer:
         print "Here"
         body = self.readUploadFile(env)
         form = cgi.FieldStorage(fp=body, environ=env, keep_blank_values=True)
-        print form
-        return self.fileStructure(env,resp)
-    
+        file = form.list[0]
+        name = file.filename
+        path = env['HTTP_REFERER'].split('dirPage')[1]
+        file = file.file.read()
+        if self.serverRequests.uploadFile(file,(path + "/" + name)):
+            return self.fileStructure(env, resp)
+        else:
+            return self.errorScreen(env,resp)
+
     def readUploadFile(self,env):
         length = int(env.get('CONTENT_LENGTH', 0))
         stream = env['wsgi.input']
@@ -144,25 +136,43 @@ class UIServer:
 
 #MARK: FILES OPERATIOS
     def filePage(self,env,resp):
-        filePage = open('templates/filePage.html','r').read()
-        filePath = env['PATH_INFO'].strip("/filePage")
-        fileName = filePath.split('/')[-1]
-        filePage = filePage.replace("#PATH#",filePath) 
-        filePage = filePage.replace("#FILE#",fileName)
-        query_string = env['QUERY_STRING']
-        action = query_string.split('=')[-1]
-        if action == "Download":
-            return self.downloadFile(filePath,resp)
-        elif action == "Delete":
-            if self.serverRequests.removeFile(fileName,filePath):
-                return self.fileStructure(env,resp)
-            else:
-                return self.errorScreen(env,resp)
-        resp('200 OK', [('Content-type', 'text/html')])
-        return [filePage]
+        if env['REQUEST_METHOD'] == 'POST':
+            post_env = env.copy()
+            post_env['QUERY_STRING'] = ''
+            post = cgi.FieldStorage(
+                fp=env['wsgi.input'],
+                environ=post_env,
+                keep_blank_values=True
+            )
+            path = env['PATH_INFO'].split('filePage')[1]
+            if 'newName' in post.keys():
+                newName = post['newName'].value
+                fileExtension = path.split('.')[1]
+                if self.serverRequests.renameFile((newName + "." + fileExtension), path):
+                    return self.fileStructure(env, resp)
+                else:
+                    return self.errorScreen(env, resp)
+            elif 'delete' in post.keys():
+                if self.serverRequests.removeFile(path):
+                    return self.fileStructure(env, resp)
+                else:
+                    return self.errorScreen(env, resp)
+        else:
+            filePage = open('templates/filePage.html','r').read()
+            filePath = env['PATH_INFO'].strip("/filePage")
+            fileName = filePath.split('/')[-1]
+            filePage = filePage.replace("#PATH#",filePath)
+            filePage = filePage.replace("#FILE#",fileName)
+            query_string = env['QUERY_STRING']
+            action = query_string.split('=')[-1]
+            if action == "Download":
+                return self.downloadFile(env,resp)
+            resp('200 OK', [('Content-type', 'text/html')])
+            return [filePage]
 
-    def downloadFile(self,filePath, resp):
-        file = self.serverRequests.downloadFile(filePath)
+    def downloadFile(self,env, resp):
+        path = env['PATH_INFO'].split('filePage')[1]
+        file = self.serverRequests.downloadFile(path)
         if (file == None):
             return self.errorScreen(env,resp)
         resp('200 OK', [('Content-type', 'text/pain')])
@@ -173,8 +183,12 @@ class UIServer:
         info = self.serverRequests.getServerInfo()
         if (info == None):
             return self.errorScreen(env,resp)
-        resp('200 OK', [('Content-type', 'text/pain')])
-        return [info]
+        resp('200 OK', [('Content-type', 'text/html')])
+        capacity = info['capacityOfSystem']
+        files = info['filesDistribution']
+        numberOfFiles = info['numberOfFiles']
+        activeNodes = info['activeNodes']
+        return [UIGenerator.generateSystemInfoHTML(capacity,files,numberOfFiles,activeNodes)]
 
 #MARK: Static folder reading
     def static_app(self,env, resp):

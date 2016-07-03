@@ -3,14 +3,14 @@
 <body>
 <B>Directory Path:</B> #PATH#
 <P>
-<form method=POST action="changeFileName">
+<form method=POST>
     <B>Enter new dir name:</B>
-    <input type=text name=dir>
+    <input type=text name=newName>
     <input type=submit>
 </form>
 
 <form method=POST>
-    <B>Enter new dir name:</B>
+    <B>Create new dir:</B>
     <input type=text name=newDir>
     <input type=submit>
 </form>
@@ -20,8 +20,8 @@
 	<input type="file" name="text" accept=".txt">
 	<input type="submit">
 </form>
-<form>
+<form method=POST>
 	<B> Delete directory</B>
-	<input type="submit" name="action" value="Delete">
+	<input type="submit" name=delete>
 </form>
 </body></html>

@@ -24,7 +24,11 @@ class ServerRequests:
 		return True
 
 	def getServerInfo(self):
-		return "Descobrir número de arquivos, quantidade de dados e número de users conectados"
+		response = self.clientInterface.infofiles()
+		if self.__errorVerification(response):
+			return response
+		else:
+			return None
 
 	def fileDistribution(self):
 		response = self.clientInterface.dirinfo()
@@ -37,7 +41,7 @@ class ServerRequests:
 		
 	def newDir(self,name, path):
 		print "Novo diretório"
-		response = self.clientInterface.newDir(path,name)
+		response = self.clientInterface.createdir(path,name)
 		if self.__errorVerification(response):
 			return True
 		else:
@@ -67,8 +71,7 @@ class ServerRequests:
 		else:
 			return False
 
-	def removeFile(self,name, path):
-		print "Arquivo removido: " + name
+	def removeFile(self, path):
 		response = self.clientInterface.removefile(path)
 		if self.__errorVerification(response):
 			return True
