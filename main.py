@@ -1,10 +1,8 @@
 from tempfile import TemporaryFile
-from wsgiref.util import setup_testing_defaults
 from wsgiref import simple_server
 import cgi, re
 from ServerRequests import *
 import UIGenerator
-import json
 
 class UIServer:
 
@@ -24,6 +22,7 @@ class UIServer:
             (r'filePage/?(.*)',self.filePage),
             (r'dirPage/?(.*)',self.dirPage),
             (r'donwload/?(.*)',self.downloadFile)]
+
         print "Listening on port 8000...."
         self.serverRequests = ServerRequests()
         print "here"
@@ -79,20 +78,49 @@ class UIServer:
         resp('200 OK', [('Content-type', 'text/html')])
         return html
 
+    def newDir(self,env,resp):
+        if (self.serverRequests.newDir(env,resp)):
+            resp('200 OK', [('Content-type', 'text/html')])
+            return self.fileStructure(env,resp)
+        else:
+            return self.errorScreen(env,resp)
+
+
 #MARK: Dir operations
     def dirPage(self,env,resp):
-        dirPage = open('templates/dirPage.html','r').read()
-        dirPage = dirPage.replace("#PATH#",env['PATH_INFO']) 
-        dirName = dirPage.split('/')[-1]
-        query_string = env['QUERY_STRING']
-        action = query_string.split('=')[-1]
-        if action == "Delete":
-            if self.serverRequests.removeFile(dirName,dirPage):
-                return self.fileStructure(env,resp)
-            else:
-                return self.errorScreen(env,resp)
-        resp('200 OK', [('Content-type', 'text/html')])
-        return [dirPage]
+        if env['REQUEST_METHOD'] == 'POST':
+            post_env = env.copy()
+            post_env['QUERY_STRING'] = ''
+            post = cgi.FieldStorage(
+                fp=env['wsgi.input'],
+                environ=post_env,
+                keep_blank_values=True
+            )
+            if 'newDir' in post.keys():
+                newDir = post['newDir'].value
+                if self.serverRequests.newDir(newDir, env['PATH_INFO']):
+                    return self.fileStructure(env, resp)
+                else:
+                    return self.errorScreen(env, resp)
+            elif 'newName' in post.keys():
+                newName = post['newName'].value
+                if self.serverRequests.renameDir(newName, env['PATH_INFO']):
+                    return self.fileStructure(env, resp)
+                else:
+                    return self.errorScreen(env, resp)
+        else:
+            dirPage = open('templates/dirPage.html','r').read()
+            dirPage = dirPage.replace("#PATH#",env['PATH_INFO'])
+            dirName = dirPage.split('/')[-1]
+            query_string = env['QUERY_STRING']
+            action = query_string.split('=')[-1]
+            if action == "Delete":
+                if self.serverRequests.removeFile(dirName,dirPage):
+                    return self.fileStructure(env,resp)
+                else:
+                    return self.errorScreen(env,resp)
+            resp('200 OK', [('Content-type', 'text/html')])
+            return [dirPage]
 
     def uploadFile(self,env,resp):
         print "Here"

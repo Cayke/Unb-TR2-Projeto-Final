@@ -5,7 +5,7 @@ from dht import DHT
 import Define
 
 class MasterServer(object):
-    HOST = ''
+    HOST = '127.0.0.1'
     PORT = 5000
     DHT = DHT(50)
 
@@ -92,7 +92,7 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
-            self.DHT.rebalancing()
+            # self.DHT.rebalancing()
 
         elif id == -1:
             response = dict(responseStatus = 'ERROR', errormsg = 'dht_overflow')

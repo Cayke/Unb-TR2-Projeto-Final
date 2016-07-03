@@ -137,7 +137,7 @@ class DHT (object):
         path = self.getLocalPathForPath(path)
         if self.saveBase64ToPath(path, file):
             self.arrayWithHashAndPath.append((path,self.getHashForPath(path)))
-            self.rebalancing()
+            # self.rebalancing()
             return True
         else:
             return False

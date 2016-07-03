@@ -7,7 +7,6 @@ import os
 import signal
 import time
 import threading
-import netifaces as ni
 
 
 class ClientInterface:
