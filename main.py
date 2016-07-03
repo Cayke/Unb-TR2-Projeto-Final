@@ -25,9 +25,11 @@ class UIServer:
             (r'dirPage/?(.*)',self.dirPage),
             (r'donwload/?(.*)',self.downloadFile)]
         print "Listening on port 8000...."
+        self.serverRequests = ServerRequests()
+        print "here"
         server=simple_server.make_server('', 8000, self.app)
         server.serve_forever()
-        self.serverRequests = ServerRequests()
+
 
 #MARK: Error
     def not_found(self,environ, start_response):
@@ -62,14 +64,19 @@ class UIServer:
                 keep_blank_values=True
             )
             self.userName = post['user'].value
-            return self.fileStructure(env,resp)
+            if (self.serverRequests.login(self.userName)):
+                return self.fileStructure(env,resp)
+            else:
+                return self.errorScreen(env,resp)
         return [self.userName]
 
 #MARK: Files page
     def fileStructure(self,env,resp):
-        resp('200 OK', [('Content-type', 'text/html')])
         jsonFile = self.serverRequests.fileDistribution()
+        if (jsonFile == None):
+            return self.errorScreen(env,resp)
         html = UIGenerator.generateFileTreePage(jsonFile)
+        resp('200 OK', [('Content-type', 'text/html')])
         return html
 
 #MARK: Dir operations
@@ -80,8 +87,10 @@ class UIServer:
         query_string = env['QUERY_STRING']
         action = query_string.split('=')[-1]
         if action == "Delete":
-            getServerRequests.removeFile(dirName,dirPage)
-            return self.fileStructure(env,resp)
+            if self.serverRequests.removeFile(dirName,dirPage):
+                return self.fileStructure(env,resp)
+            else:
+                return self.errorScreen(env,resp)
         resp('200 OK', [('Content-type', 'text/html')])
         return [dirPage]
 
@@ -117,19 +126,25 @@ class UIServer:
         if action == "Download":
             return self.downloadFile(filePath,resp)
         elif action == "Delete":
-            getServerRequests.removeFile(fileName,filePath)
-            return self.fileStructure(env,resp)
+            if self.serverRequests.removeFile(fileName,filePath):
+                return self.fileStructure(env,resp)
+            else:
+                return self.errorScreen(env,resp)
         resp('200 OK', [('Content-type', 'text/html')])
         return [filePage]
 
     def downloadFile(self,filePath, resp):
-        file = getServerRequests.downloadFile(filePath)
+        file = self.serverRequests.downloadFile(filePath)
+        if (file == None):
+            return self.errorScreen(env,resp)
         resp('200 OK', [('Content-type', 'text/pain')])
         return [file]
 
 #MARK: Server info
     def serverInfo(self,env,resp):
-        info = getServerRequests.getServerInfo()
+        info = self.serverRequests.getServerInfo()
+        if (info == None):
+            return self.errorScreen(env,resp)
         resp('200 OK', [('Content-type', 'text/pain')])
         return [info]
 
@@ -161,5 +176,8 @@ class UIServer:
                     return callback(env, resp)
             
         return self.not_found(env, resp)
+    def errorScreen(self,env, resp):
+        resp('200 OK', [('Content-type', 'text/pain')])
+        return ['The request failed. Please go back and try again.']
 
 UIServer()    

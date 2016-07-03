@@ -29,7 +29,9 @@ class ServerRequests:
 	def fileDistribution(self):
 		response = self.clientInterface.dirinfo()
 		if self.__errorVerification(response):
-			return response[Define.Success]
+			print "Message"
+			print response['msg']
+			return response['msg']
 		else:
 			return None
 		
@@ -76,19 +78,20 @@ class ServerRequests:
 	def downloadFile(self,path):
 		response = self.clientInterface.download(path)
 		if self.__errorVerification(response):
-			return response[Define.Success]
+			return response['msg']
 		else:
-			return False
+			return None
 
-	def uploadFile(self,name,data,path):
-		response = self.clientInterface.upload(name,data,path)
+	def uploadFile(self,data,path):
+		response = self.clientInterface.upload(data,path)
 		if self.__errorVerification(response):
 			return True
 		else:
 			return False
 
 	def __errorVerification(self,response):
-		if Define.Success in response.keys():
+		print response['code']
+		if Define.SUCCESS == response['code']:
 			return True
 		else:
 			return False
