@@ -5,3 +5,8 @@
 .idea/tr2-trabalhofinal.iml
 .idea/vcs.xml
 .idea/workspace.xml
+ClientInterface.pyc
+Define.pyc
+dht.pyc
+masterServer.pyc
+ServerRequests.pyc
