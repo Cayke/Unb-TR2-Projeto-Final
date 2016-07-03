@@ -81,7 +81,7 @@ class MasterServer(object):
             self.renameFile(request,socketTCP, client)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'undefined_type')
+            response = dict(responseStatus = 'ERROR', errormsg = 'undefined_type')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -89,19 +89,18 @@ class MasterServer(object):
         username = request['username']
         id = self.DHT.registerUser(username, client)
         if id >= 0:
-            #TODO CRIAR PASTA PARA USER
             response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
             self.DHT.rebalancing()
 
         elif id == -1:
-            response = dict(responseStatus = 'ERROR', message = 'dht_overflow')
+            response = dict(responseStatus = 'ERROR', errormsg = 'dht_overflow')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
         elif id == -2:
-            response = dict(responseStatus = 'ERROR', message = 'user_already_registered')
+            response = dict(responseStatus = 'ERROR', errormsg = 'user_already_registered')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -112,9 +111,10 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
+            self.DHT.sendFilesToUser(id)
 
         elif id == -1:
-            response = dict(responseStatus = Define.USERNOTREGISTER, message = 'user_not_found')
+            response = dict(responseStatus = Define.USERNOTREGISTER, errormsg = 'user_not_found')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -133,14 +133,13 @@ class MasterServer(object):
         path = str(request['path'])
         data = str(request['data'])
 
-        #todo conferir se path e valido, caso nao seja, retornar erro
         if self.DHT.saveFileAtPath(path, data, client): #salvou
             response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -190,7 +189,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -204,7 +203,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -217,7 +216,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -230,7 +229,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -244,7 +243,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', message = 'error_processing_file')
+            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -254,9 +253,9 @@ class MasterServer(object):
         dest = (ip, 5000 + userID)
         socketTCP.connect(dest)
 
-        response = dict(type = 'dhtfiles', files = files)
-        responseJSON = json.dumps(response)
-        socketTCP.send(responseJSON)
+        request = dict(type = 'dhtfiles', files = files)
+        requestJSON = json.dumps(request)
+        socketTCP.send(requestJSON)
 
     def sendDirectoriesTree(self, socketTCP):
         dictTree = self.DHT.getDirectioriesTree()

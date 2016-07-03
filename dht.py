@@ -49,6 +49,7 @@ class DHT (object):
                 self.arrayWithEmptyIDs.remove(aloccedID)
                 self.arrayWithAllocedIDs.append((username, aloccedID))
                 self.arrayWithActiveNodes.append((aloccedID,client))
+                self.createUserPath(username)
                 return aloccedID
             else:
                 return -1
@@ -65,7 +66,6 @@ class DHT (object):
         for (uName, id) in self.arrayWithAllocedIDs:
             if (username == uName):
                 self.arrayWithActiveNodes.append((id, client))
-                self.sendFilesToUser(id)
                 return id
         return -1
 
@@ -131,6 +131,9 @@ class DHT (object):
         return False
 
     def saveFileAtPath(self, path, file, client):
+        if not self.validateIfUserHasAccessToPath(path, client):
+            return False
+
         path = self.getLocalPathForPath(path)
         if self.saveBase64ToPath(path, file):
             self.arrayWithHashAndPath.append((path,self.getHashForPath(path)))
@@ -147,8 +150,6 @@ class DHT (object):
             return False
 
     def getIPPortForID(self, id):
-        # Array com os nos ativos no momento
-        # arrayWithActiveNodes = [] # [(id,(ip,port))]
         for (ID, client) in self.arrayWithActiveNodes:
             if id == ID:
                 return client
@@ -251,6 +252,11 @@ class DHT (object):
         if not os.path.exists(self.rootFolder):
             os.makedirs(self.rootFolder)
 
+    def createUserPath(self, username):
+        userFolder = os.path.join(self.rootFolder, username)
+        if not os.path.exists(userFolder):
+            os.makedirs(userFolder)
+
     # retorna um dicionario contendo {type: dir ou file, name: nome do mesmo, list: [dicts] contendo o que esta dentro dele
     def getDirectioriesTree(self):
         return self.getDirectoriesTreeForPath(self.rootFolder)
@@ -324,7 +330,7 @@ class DHT (object):
 
     def sendHashsToAllNodes(self):
         for (id, client) in self.arrayWithActiveNodes:
-            self.sendFilesToUser(id, self.getListWithHashesForUserID(id))
+            self.sendFilesToUser(id)
 
     def getListWithHashesForUserID(self, userID):
         array = []
@@ -333,8 +339,9 @@ class DHT (object):
                 array.append(hash)
         return array
 
-    def sendFilesToUser(self, userID, listWithHashes):
+    def sendFilesToUser(self, userID):
         (ip, port) = self.getIPPortForID(userID)
+        listWithHashes = self.getListWithHashesForUserID(id)
         masterServer.MasterServer.sendFilesForUser(userID, ip, listWithHashes)
 
     #retorna numero de arquivos
