@@ -131,13 +131,14 @@ class DHT (object):
         return False
 
     def saveFileAtPath(self, path, file, client):
+        path = self.getLocalPathForPath(path)
         if not self.validateIfUserHasAccessToPath(path, client):
             return False
 
         path = self.getLocalPathForPath(path)
         if self.saveBase64ToPath(path, file):
             self.arrayWithHashAndPath.append((path,self.getHashForPath(path)))
-            self.rebalancing()
+            # self.rebalancing()
             return True
         else:
             return False

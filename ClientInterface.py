@@ -7,7 +7,6 @@ import os
 import signal
 import time
 import threading
-import netifaces as ni
 
 
 class ClientInterface:
@@ -19,7 +18,7 @@ class ClientInterface:
     __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     __username = ''
     __serverdown = False
-    __keepalivetime = 15
+    __keepalivetime = 30
 
     def __init__(self):
         self.__th = threading.Thread(target=self.dht, args=())
@@ -41,8 +40,8 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = jsonresponse["id"]
             self.__username = username
-            if not self.__th.isAlive():
-                self.__th.start()
+            #if not self.__th.isAlive():
+                #self.__th.start()
             return dict(code=Define.SUCCESS, msg='Success')
         else:
             return dict(code=jsonresponse["responseStatus"], msg="Register Error")
@@ -65,8 +64,8 @@ class ClientInterface:
             return jsonerror
 
         # Call keepalive in 30 seconds
-        signal.signal(signal.SIGALRM, self.__keepalive)
-        signal.alarm(self.__keepalivetime)
+        #signal.signal(signal.SIGALRM, self.__keepalive)
+        #signal.alarm(self.__keepalivetime)
 
         jsonmsg = dict(username=username, type=Define.LOGIN)
         msg = json.dumps(jsonmsg)
@@ -80,8 +79,8 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = int(jsonresponse["id"])
             self.__username = username
-            if not self.__th.isAlive():
-                self.__th.start()
+            #if not self.__th.isAlive():
+                #self.__th.start()
             return dict(code=Define.SUCCESS, msg='Success')
         elif int(jsonresponse["responseStatus"]) == Define.USERNOTREGISTER:
             return self.__register(username)
@@ -166,7 +165,7 @@ class ClientInterface:
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
-            return dict(code=Define.SUCCESS, msg=str(jsonresponse["tree"]))
+            return dict(code=Define.SUCCESS, msg=jsonresponse["tree"])
         else:
             return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
@@ -194,7 +193,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename directory
     # param: path - The path of the new directory included the directory to rename
@@ -219,7 +218,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove directory
     # param: path - The path of the new directory included the directory to remove
@@ -240,7 +239,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename file
     # param: path - The path of the old file included the file to rename
@@ -262,7 +261,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove file
     # param: path - The path of the file included the file to remove
@@ -283,7 +282,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def infofiles(self):
         if self.__ID == -1:
@@ -301,7 +300,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, numberOfFiles=jsonresponse['numberOfFiles'], capacityOfSystem=jsonresponse['capacityOfSystem'], filesDistribution=jsonresponse['filesDistribution'],  activeNodes=jsonresponse['activeNodes'])
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def logout(self):
         self.__tcp.close()
@@ -323,7 +322,7 @@ class ClientInterface:
         except socket.error:
             # Send failed
             print 'Send failed'
-            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
+            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
             return error
 
         rtn = con.recv(2048)
@@ -337,10 +336,13 @@ class ClientInterface:
         except socket.error:
             # Send failed
             print 'Send failed'
-            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
+            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
             return error
 
-        rtn = self.__tcp.recv(2048)
+        try:
+            rtn = self.__tcp.recv(2048)
+        except:
+            return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "msg" :  "Server didnt responde"}'
 
         return rtn
 
@@ -370,8 +372,8 @@ class ClientInterface:
     def __keepalive(self, signum, stack):
 
         # Call keepalive in 30 seconds
-        signal.signal(signal.SIGALRM, self.__keepalive)
-        signal.alarm(self.__keepalivetime)
+        #signal.signal(signal.SIGALRM, self.__keepalive)
+        #signal.alarm(self.__keepalivetime)
 
         msg = dict(type=Define.KEEPALIVE)
         print 'keepalive: ' + time.ctime()

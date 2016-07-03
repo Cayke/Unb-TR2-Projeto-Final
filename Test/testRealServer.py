@@ -18,7 +18,7 @@ class TestClientMethods(unittest.TestCase):
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEquals(rtn["msg"], 'Success')
         #createdir
-        #time.sleep(60)
+        time.sleep(240)
         rtn = client.createdir('/CFICloud/test/', "1")
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         #renamedir
@@ -32,14 +32,14 @@ class TestClientMethods(unittest.TestCase):
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEquals(rtn["msg"], 'abcdefghijklmnopqrstuwxyz')
         #removedir
-        rtn = client.removedir('/CFICloud/test/1/')
+        rtn = client.removedir('/CFICloud/test/def/')
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         #renamefile
         rtn = client.renamefile('/CFICloud/test/test.txt', 'test2.txt')
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")
         #removefile
-        #time.sleep(60)
+        #time.sleep(480)
         rtn = client.removefile('/CFICloud/test/test2.txt')
         self.assertEqual(int(rtn["code"]), Define.SUCCESS)
         self.assertEqual(rtn["msg"], "Success")

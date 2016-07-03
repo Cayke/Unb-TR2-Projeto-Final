@@ -5,8 +5,8 @@ from dht import DHT
 import Define
 
 class MasterServer(object):
-    HOST = ''
-    PORT = 5000
+    HOST = 'localhost'
+    PORT = 5001
     DHT = DHT(50)
 
     def __init__(self):
@@ -64,7 +64,7 @@ class MasterServer(object):
         elif type == Define.DIRINFO:
             self.sendDirectoriesTree(socketTCP)
 
-        elif type == 'infofiles':
+        elif type == Define.INFOFILES:
             self.infoFiles(request,socketTCP, client)
 
         elif type == Define.CREATEDIR:
@@ -94,7 +94,7 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
-            self.DHT.rebalancing()
+            # self.DHT.rebalancing()
 
         elif id == -1:
             response = dict(responseStatus = 'ERROR', errormsg = 'dht_overflow')
@@ -175,10 +175,10 @@ class MasterServer(object):
 
     def infoFiles(self, request,socketTCP, client):
         response = dict(responseStatus = Define.SUCCESS,
-                        numberOfFiles = self.DHT.getNumberOfFiles,
-                        capacityOfSystem = self.DHT.getCapacityOfSystem,
-                        filesDistribution = self.DHT.getFilesDistribution,
-                        activeNodes = self.DHT.getActiveNodes)
+                        numberOfFiles = self.DHT.getNumberOfFiles(),
+                        capacityOfSystem = self.DHT.getCapacityOfSystem(),
+                        filesDistribution = self.DHT.getFilesDistribution(),
+                        activeNodes = self.DHT.getActiveNodes())
         responseJSON = json.dumps(response)
         socketTCP.send(responseJSON)
 
