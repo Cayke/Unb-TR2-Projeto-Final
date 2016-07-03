@@ -2,7 +2,7 @@ from tempfile import TemporaryFile
 from wsgiref.util import setup_testing_defaults
 from wsgiref import simple_server
 import cgi, re
-import getServerRequests
+from ServerRequests import *
 import UIGenerator
 import json
 
@@ -13,6 +13,8 @@ class UIServer:
     userName = ""
     server = None
     urls = []
+    serverRequests = None
+
     def __init__(self):
         self.urls = [(r'^$',self.main),
             (r'login/?$',self.login),
@@ -25,6 +27,7 @@ class UIServer:
         print "Listening on port 8000...."
         server=simple_server.make_server('', 8000, self.app)
         server.serve_forever()
+        self.serverRequests = ServerRequests()
 
 #MARK: Error
     def not_found(self,environ, start_response):
@@ -65,7 +68,7 @@ class UIServer:
 #MARK: Files page
     def fileStructure(self,env,resp):
         resp('200 OK', [('Content-type', 'text/html')])
-        jsonFile = getServerRequests.fileDistribution()
+        jsonFile = self.serverRequests.fileDistribution()
         html = UIGenerator.generateFileTreePage(jsonFile)
         return html
 
