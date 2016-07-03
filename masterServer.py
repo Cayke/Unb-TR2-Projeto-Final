@@ -28,7 +28,7 @@ class MasterServer(object):
     def clientConnected(self, socketTCPThread, client):
         while True:
             try:
-                #socketTCPThread.settimeout(60)
+                socketTCPThread.settimeout(60)
                 data = socketTCPThread.recv(2048)
                 request = json.loads(data)
                 self.getRequestStatus(request,socketTCPThread,client)
@@ -39,6 +39,8 @@ class MasterServer(object):
                 return False
             except:
                 print 'ocorreu algum erro desconhecido, matando thread'
+                socketTCPThread.close()
+                self.DHT.logOutUser(client)
                 return False
 
     def getRequestStatus(self, request, socketTCP, client):
@@ -201,6 +203,7 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
+            self.DHT.rebalancing()
 
         else:
             response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
@@ -241,6 +244,7 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
+            self.DHT.rebalancing()
 
         else:
             response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
