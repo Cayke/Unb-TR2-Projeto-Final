@@ -4,7 +4,6 @@ import json
 import base64
 import Define
 import os
-import signal
 import time
 import threading
 
@@ -12,7 +11,7 @@ import threading
 
 class ClientInterface:
 
-    __IP = '127.0.0.1'   # Server IP
+    __IP = '10.32.3.65'   # Server IP
     __PORTSERVER = 5000  # Server PORT
     __PORTCLIENT = 4578  # Client PORT to recive DHT files
     __ID = -1            # ID do usuário
@@ -395,7 +394,9 @@ class ClientInterface:
     def dht(self):
 
         tcpdht = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        tcpdht.bind((self.__IP, 5000 + self.__ID))
+        ip = socket.gethostbyname(socket.gethostname())
+        tupla = (ip, self.__PORTSERVER + self.__ID)
+        tcpdht.bind(tupla)
         tcpdht.listen(2)
 
         path = os.getcwd()
