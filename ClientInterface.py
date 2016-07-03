@@ -3,26 +3,26 @@ import socket
 import json
 import base64
 import Define
+import os
+import signal
+import time
+import threading
+import netifaces as ni
 
 
 class ClientInterface:
 
-    __IP = '192.168.200.179'   # Server IP
+    __IP = '127.0.0.1'   # Server IP
     __PORTSERVER = 5000  # Server PORT
     __PORTCLIENT = 4578  # Client PORT to recive DHT files
-    __ID = 1            # ID do usuário
+    __ID = -1            # ID do usuário
+    __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    __username = ''
+    __serverdown = False
+    __keepalivetime = 15
 
     def __init__(self):
-        try:
-            self.tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            dest = (self.__IP, self.__PORTSERVER)
-            #self.tcp.bind(('127.0.0.1', self.__PORTCLIENT))
-            self.tcp.connect(dest)
-        except socket.error as msg:
-            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
-            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Failed to create socket"}'
-            jsonerror = json.loads(error)
-            return jsonerror
+        self.__th = threading.Thread(target=self.dht, args=())
 
     # Register a user
     # param: username - The username to register in database
@@ -32,15 +32,20 @@ class ClientInterface:
         jsonmsg = dict(username=username, type=Define.REGISTER)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = jsonresponse["id"]
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            self.__username = username
+            if not self.__th.isAlive():
+                self.__th.start()
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=jsonresponse["responseStatus"], msg="Register Error")
-            return error
+            return dict(code=jsonresponse["responseStatus"], msg="Register Error")
 
 
     # Login a user
@@ -48,99 +53,122 @@ class ClientInterface:
     # return: json {code,msg}
     def login(self, username):
 
+        try:
+            self.__tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            dest = (self.__IP, self.__PORTSERVER)
+            # self.tcp.bind(('', self.__PORTCLIENT))
+            self.__tcp.connect(dest)
+        except socket.error as msg:
+            print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
+            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Failed to create socket"}'
+            jsonerror = json.loads(error)
+            return jsonerror
+
+        # Call keepalive in 30 seconds
+        signal.signal(signal.SIGALRM, self.__keepalive)
+        signal.alarm(self.__keepalivetime)
+
         jsonmsg = dict(username=username, type=Define.LOGIN)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             self.__ID = int(jsonresponse["id"])
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            self.__username = username
+            if not self.__th.isAlive():
+                self.__th.start()
+            return dict(code=Define.SUCCESS, msg='Success')
         elif int(jsonresponse["responseStatus"]) == Define.USERNOTREGISTER:
             return self.__register(username)
         else:
-            error = dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
 
 
     # Upload file to server
-    # param: filename - Name of the file
     # param: data - Tho content of the file
     # param: path - The path of the file
     # return: json {code,msg}
-    def upload(self, filename, data, path):
+    def upload(self, data, path):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         datab64 = base64.b64encode(data)
         jsonmsg = dict(path=path, data=datab64, type=Define.UPLOAD)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Download file from server
     # param: path - The path of the file including file name
     # return: SUCCESS/ERROR CODE (if success file will be writen in a folder)
     def download(self, path):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         jsonmsg = dict(method='path', path=path, type=Define.DOWNLOAD)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             if jsonresponse["type"] == 'file':
-                success = dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
-                return success
+                return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
             elif jsonresponse["type"] == 'hash':
                 jsonmsg = dict(method='hash', hash=str(jsonresponse["hashName"]), type=Define.DOWNLOAD)
                 msg = json.dumps(jsonmsg)
                 ip, port = jsonresponse["node"].split(':')
                 response = self.__sendMSG(msg, ip, int(port))
-                jsonresponse = json.loads(response)
+                try:
+                    jsonresponse = json.loads(response)
+                except:
+                    return dict(code=Define.ERROTCP, msg='Download failed')
+
                 if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
-                    success = dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
-                    return success
+                    return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
                 else:
-                    error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-                    return error
+                    return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
             else:
-                error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-                return error
+                return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     def dirinfo(self):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         jsonmsg = dict(type=Define.DIRINFO)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
-        if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg=str(jsonresponse["dir"]))
-            return success
+        if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
+            return dict(code=Define.SUCCESS, msg=str(jsonresponse["tree"]))
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Create directory
     # param: path - The path of the new directory without the new directory
@@ -148,20 +176,25 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE
     def createdir(self, path, namedir):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
-        jsonmsg = dict(path=path, dirname=namedir, type=Define.CREATEDIR)
+        if path[-1:] == '/':
+            path = path[:-1]
+
+        path = os.path.join(path, namedir)
+        jsonmsg = dict(path=path, type=Define.CREATEDIR)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename directory
     # param: path - The path of the new directory included the directory to rename
@@ -169,40 +202,45 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE
     def renamedir(self, path, newnamedir):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+
+        if path[-1:] == '/':
+            path = path[:-1]
 
         jsonmsg = dict(path=path, newname=newnamedir, type=Define.RENAMEDIR)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove directory
     # param: path - The path of the new directory included the directory to remove
     # return: SUCCESS/ERROR CODE
     def removedir(self, path):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         jsonmsg = dict(path=path, type=Define.REMOVEDIR)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename file
     # param: path - The path of the old file included the file to rename
@@ -210,43 +248,63 @@ class ClientInterface:
     # return: SUCCESS/ERROR CODE
     def renamefile(self, path, newname):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         jsonmsg = dict(path=path, newname=newname, type=Define.RENAMEFILE)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove file
     # param: path - The path of the file included the file to remove
     # return: SUCCESS/ERROR CODE
     def removefile(self, path):
         if self.__ID == -1:
-            error = dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
-            return error
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         jsonmsg = dict(path=path, type=Define.REMOVEFILE)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
-        jsonresponse = json.loads(response)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
-            success = dict(code=Define.SUCCESS, msg='Success')
-            return success
+            return dict(code=Define.SUCCESS, msg='Success')
         else:
-            error = dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
-            return error
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+
+    def infofiles(self):
+        if self.__ID == -1:
+            return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
+
+        jsonmsg = dict(type=Define.INFOFILES)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        try:
+            jsonresponse = json.loads(response)
+        except:
+            self.__ID = -1
+            return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
+
+        if jsonresponse["responseStatus"] == Define.SUCCESS:
+            return dict(code=Define.SUCCESS, numberOfFiles=jsonresponse['numberOfFiles'], capacityOfSystem=jsonresponse['capacityOfSystem'], filesDistribution=jsonresponse['filesDistribution'],  activeNodes=jsonresponse['activeNodes'])
+        else:
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
 
     def logout(self):
-        self.tcp.close()
+        self.__tcp.close()
 
     def __sendMSG(self, msg, ip, port):
         try:
@@ -275,13 +333,91 @@ class ClientInterface:
 
     def __sendMSGtoserver(self, msg):
         try:
-            self.tcp.send(msg)
+            self.__tcp.send(msg)
         except socket.error:
             # Send failed
             print 'Send failed'
             error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
             return error
 
-        rtn = self.tcp.recv(2048)
+        rtn = self.__tcp.recv(2048)
 
         return rtn
+
+    def __downloadserverhash(self, hash):
+        jsonmsg = dict(method='hash', hash=hash, type=Define.DOWNLOAD)
+        msg = json.dumps(jsonmsg)
+        response = self.__sendMSGtoserver(msg)
+        jsonresponse = json.loads(response)
+        if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
+            return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
+        else:
+            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+
+    def __reconnect(self):
+        rtn = self.login(self.__username)
+        try:
+            jsonrtn = json.loads(rtn)
+        except:
+            self.__ID = -1
+            return dict(code=jsonrtn["responseStatus"], msg="Decoding JSON has failed. Connection down")
+
+        if int(jsonrtn['responseStatus']) == Define.SUCCESS:
+            return dict(responseStatus=Define.SUCCESS, msg="Reconnected")
+        else:
+            return dict(responseStatus=Define.SERVERDOWN, msg="Server down")
+
+    def __keepalive(self, signum, stack):
+
+        # Call keepalive in 30 seconds
+        signal.signal(signal.SIGALRM, self.__keepalive)
+        signal.alarm(self.__keepalivetime)
+
+        msg = dict(type=Define.KEEPALIVE)
+        print 'keepalive: ' + time.ctime()
+        try:
+            self.__tcp.send(json.dumps(msg))
+        except socket.error:
+            # Send failed
+            print 'Send failed Keep alive: Connection closed'
+            '''print 'Trying to reconnect'
+            rtn = self.reconnect()
+
+            if int(rtn['responseStatus']) == Define.SERVERDOWN:
+                self.__serverdown = True'''
+        finally:
+            if not self.__th.isAlive():
+                self.__th.start()
+
+    def dht(self):
+
+        tcpdht = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        tcpdht.bind((self.__IP, 5000 + self.__ID))
+        tcpdht.listen(2)
+
+        path = os.getcwd()
+        directory = os.path.join(path, 'DHT')
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+
+        while True:
+            con, cliente = tcpdht.accept()
+            msg = con.recv(1024)
+            jsonmsg = json.loads(msg)
+
+            if jsonmsg['type'] == Define.DHTFILES:
+                array = jsonmsg['files']
+                filepath = directory + '/' + jsonmsg['Hash']
+                with open(filepath, 'wb') as f:
+                    for index in range(len(array)):
+                        rtn = self.__downloadserverhash(array[index])
+                        jsonrtn = json.loads(rtn)
+                        f.write(base64.b64decode(jsonrtn['data']))
+
+            elif jsonmsg['type'] == Define.DOWNLOAD:
+                filepath = directory + '/' + jsonmsg['Hash']
+                with open(filepath, 'rb') as f:
+                    data = f.read()
+                    data64 = base64.b64encode(data)
+                    msg = dict(responseStatus=Define.SUCCESS, type='file', data=data64)
+                    con.send(json.dumps(msg))
