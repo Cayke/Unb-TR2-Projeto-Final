@@ -6,7 +6,7 @@ import Define
 
 class MasterServer(object):
     HOST = 'localhost'
-    PORT = 5001
+    PORT = 5000
     DHT = DHT(50)
 
     def __init__(self):
