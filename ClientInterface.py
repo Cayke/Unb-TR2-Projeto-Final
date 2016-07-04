@@ -108,7 +108,7 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Download file from server
     # param: path - The path of the file including file name
@@ -164,7 +164,7 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg=jsonresponse["tree"])
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Create directory
     # param: path - The path of the new directory without the new directory
@@ -346,7 +346,7 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def __reconnect(self):
         rtn = self.login(self.__username)
