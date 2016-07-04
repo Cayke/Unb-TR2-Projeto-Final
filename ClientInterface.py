@@ -11,8 +11,8 @@ import threading
 
 class ClientInterface:
 
-    __IP = '192.168.43.200'   # Server IP
-    __PORTSERVER = 5005   # Server PORT
+    __IP = '192.168.0.105'   # Server IP
+    __PORTSERVER = 5001   # Server PORT
     __PORTCLIENT = 6000  # Client PORT to recive DHT files
     __ID = -6            # ID do usuário
     __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -44,6 +44,7 @@ class ClientInterface:
                 self.__th.start()
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg="Register Error")
 
 
@@ -84,6 +85,7 @@ class ClientInterface:
         elif int(jsonresponse["responseStatus"]) == Define.USERNOTREGISTER:
             return self.__register(username)
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
 
@@ -108,6 +110,7 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Download file from server
@@ -142,11 +145,14 @@ class ClientInterface:
                 if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
                     return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
                 else:
+                    print str(jsonresponse["errormsg"])
                     return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
             else:
+                print str(jsonresponse["errormsg"])
                 return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def dirinfo(self):
@@ -164,6 +170,7 @@ class ClientInterface:
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg=jsonresponse["tree"])
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Create directory
@@ -175,9 +182,10 @@ class ClientInterface:
             return dict(code=Define.USERUNAUTHENTICATED, msg="Permission denied, unauthenticated user")
 
         if path[-1:] == '/':
-            path = path[:-1]
+            path += namedir
+        else:
+            path += '/' + namedir
 
-        path = os.path.join(path, namedir)
         jsonmsg = dict(path=path, type=Define.CREATEDIR)
         msg = json.dumps(jsonmsg)
         response = self.__sendMSGtoserver(msg)
@@ -189,6 +197,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename directory
@@ -213,6 +222,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove directory
@@ -233,6 +243,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Rename file
@@ -254,6 +265,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     # Remove file
@@ -274,6 +286,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg='Success')
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def infofiles(self):
@@ -291,6 +304,7 @@ class ClientInterface:
         if jsonresponse["responseStatus"] == Define.SUCCESS:
             return dict(code=Define.SUCCESS, numberOfFiles=jsonresponse['numberOfFiles'], capacityOfSystem=jsonresponse['capacityOfSystem'], filesDistribution=jsonresponse['filesDistribution'],  activeNodes=jsonresponse['activeNodes'])
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def logout(self):
@@ -301,7 +315,7 @@ class ClientInterface:
             con = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         except socket.error as msg:
             print 'Failed to create socket. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
-            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "msg" :  "Failed to create socket"}'
+            error = '{"code" : "' + str(Define.FAILEDCREATESOCK) + '", "errormsg" :  "Failed to create socket"}'
             jsonerror = json.loads(error)
             return jsonerror
 
@@ -310,14 +324,19 @@ class ClientInterface:
         try:
             con.connect(dest)
             con.send(msg)
-        except socket.error:
+        except socket.error as msg:
             # Send failed
-            print 'Send failed'
-            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
+            print 'Send failed ' + msg[1]
+            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
             return error
-
-        rtn = con.recv(2048)
-        con.close()
+        try:
+            rtn = con.recv(2048)
+        except socket.error as msg:
+            print 'Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
+            return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "errormsg" :  "Error code: ' + str(
+            msg[0]) + ' , Error message : ' + str(msg[1]) + '"}'
+        finally:
+            con.close()
 
         return rtn
 
@@ -328,24 +347,26 @@ class ClientInterface:
             except socket.error:
                 # Send failed
                 print 'Send failed'
-                error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
+                error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "errormsg" :  "Send Failed"}'
                 return error
 
             try:
                 rtn = self.__tcp.recv(2048)
-            except:
-                return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "msg" :  "Server didnt responde"}'
+            except socket.error as msg:
+                print 'Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
+                return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "errormsg" :  "Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1]) + '"}'
 
             return rtn
 
     def __downloadserverhash(self, hash):
         jsonmsg = dict(method='hash', hash=hash, type=Define.DOWNLOAD)
         msg = json.dumps(jsonmsg)
-        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER + 1)
+        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER)
         jsonresponse = json.loads(response)
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
         else:
+            print str(jsonresponse["errormsg"])
             return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def __reconnect(self):
@@ -396,22 +417,26 @@ class ClientInterface:
             os.makedirs(directory)
 
         while True:
-            con, cliente = tcpdht.accept()
-            msg = con.recv(2048)
-            jsonmsg = json.loads(msg)
+            try:
+                con, cliente = tcpdht.accept()
+                msg = con.recv(2048)
+                jsonmsg = json.loads(msg)
 
-            if jsonmsg['type'] == Define.DHTFILES:
-                array = jsonmsg['files']
-                for index in range(len(array)):
-                    filepath = directory + '/' + array[index]
-                    with open(filepath, 'wb') as f:
-                        rtn = self.__downloadserverhash(array[index])
-                        f.write(rtn['msg'])
+                if jsonmsg['type'] == Define.DHTFILES:
+                    array = jsonmsg['files']
+                    for index in range(len(array)):
+                        filepath = directory + '/' + array[index]
+                        with open(filepath, 'wb') as f:
+                            rtn = self.__downloadserverhash(array[index])
+                            f.write(rtn['msg'])
 
-            elif jsonmsg['type'] == Define.DOWNLOAD:
-                filepath = directory + "/" + str(jsonmsg['hash'])
-                with open(filepath, 'rb') as f:
-                    data = f.read()
-                    data64 = base64.b64encode(data)
-                    msg = dict(responseStatus=Define.SUCCESS, type='file', data=data64)
-                    con.send(json.dumps(msg))
+                elif jsonmsg['type'] == Define.DOWNLOAD:
+                    filepath = directory + "/" + str(jsonmsg['hash'])
+                    with open(filepath, 'rb') as f:
+                        data = f.read()
+                        data64 = base64.b64encode(data)
+                        msg = dict(responseStatus=Define.SUCCESS, type='file', data=data64)
+                        con.send(json.dumps(msg))
+            except socket.error as msg:
+                print 'Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
+                print 'Failed DHT. Error code: ' + str(msg[0]) + ' , Error message : ' + str(msg[1])
