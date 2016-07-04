@@ -19,6 +19,7 @@ class ClientInterface:
     __username = ''
     __serverdown = False
     __keepalivetime = 30
+    __lock = threading.Lock()
 
     def __init__(self):
         self.__th = threading.Thread(target=self.dht, args=())
@@ -332,20 +333,21 @@ class ClientInterface:
         return rtn
 
     def __sendMSGtoserver(self, msg):
-        try:
-            self.__tcp.send(msg)
-        except socket.error:
-            # Send failed
-            print 'Send failed'
-            error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
-            return error
+        with self.__lock:
+            try:
+                self.__tcp.send(msg)
+            except socket.error:
+                # Send failed
+                print 'Send failed'
+                error = '{"responseStatus" : "' + str(Define.SENDFAILED) + '", "msg" :  "Send Failed"}'
+                return error
 
-        try:
-            rtn = self.__tcp.recv(2048)
-        except:
-            return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "msg" :  "Server didnt responde"}'
+            try:
+                rtn = self.__tcp.recv(2048)
+            except:
+                return '{"responseStatus" : "' + str(Define.ERROTCP) + '", "msg" :  "Server didnt responde"}'
 
-        return rtn
+            return rtn
 
     def __downloadserverhash(self, hash):
         jsonmsg = dict(method='hash', hash=hash, type=Define.DOWNLOAD)
