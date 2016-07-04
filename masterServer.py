@@ -3,10 +3,11 @@ import threading
 import json
 from dht import DHT
 import Define
+import time
 
 class MasterServer(object):
-    HOST = 'localhost'
-    PORT = 5000
+    HOST = '192.168.43.200'
+    PORT = 5001
     DHT = DHT(50)
 
     def __init__(self):
@@ -28,7 +29,7 @@ class MasterServer(object):
     def clientConnected(self, socketTCPThread, client):
         while True:
             try:
-                socketTCPThread.settimeout(60)
+                #socketTCPThread.settimeout(60)
                 data = socketTCPThread.recv(2048)
                 request = json.loads(data)
                 self.getRequestStatus(request,socketTCPThread,client)
@@ -83,7 +84,7 @@ class MasterServer(object):
             self.renameFile(request,socketTCP, client)
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'undefined_type')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'undefined_type')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -94,15 +95,15 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS, id = id)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
-            # self.DHT.rebalancing()
+            self.DHT.rebalancing()
 
         elif id == -1:
-            response = dict(responseStatus = 'ERROR', errormsg = 'dht_overflow')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'dht_overflow')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
         elif id == -2:
-            response = dict(responseStatus = 'ERROR', errormsg = 'user_already_registered')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'user_already_registered')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -141,7 +142,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -165,7 +166,8 @@ class MasterServer(object):
         id = self.DHT.getUserResponsableForFile(hash)
 
         if self.DHT.checkIfUserActive(id):
-            response = dict(responseStatus = Define.SUCCESS, type = 'node', node = self.DHT.getIPPortForID(id), hashName = hash)
+            (ip, port) = self.DHT.getIPPortForID(id)
+            response = dict(responseStatus = Define.SUCCESS, type = 'node', node = (ip, 6000+id), hashName = hash)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -191,7 +193,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -206,7 +208,7 @@ class MasterServer(object):
             self.DHT.rebalancing()
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -219,7 +221,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -232,7 +234,7 @@ class MasterServer(object):
             socketTCP.send(responseJSON)
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -247,17 +249,19 @@ class MasterServer(object):
             self.DHT.rebalancing()
 
         else:
-            response = dict(responseStatus = 'ERROR', errormsg = 'error_processing_file')
+            response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
     @staticmethod
     def sendFilesForUser(userID, ip, files):
+        time.sleep(2)
+
         socketTCP = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        dest = (ip, 5000 + userID)
+        dest = (ip, 6000 + userID)
         socketTCP.connect(dest)
 
-        request = dict(type = 'dhtfiles', files = files)
+        request = dict(type = Define.DHTFILES, files = files)
         requestJSON = json.dumps(request)
         socketTCP.send(requestJSON)
 

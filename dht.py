@@ -138,7 +138,7 @@ class DHT (object):
         path = self.getLocalPathForPath(path)
         if self.saveBase64ToPath(path, file):
             self.arrayWithHashAndPath.append((path,self.getHashForPath(path)))
-            # self.rebalancing()
+            self.rebalancing()
             return True
         else:
             return False
@@ -307,7 +307,7 @@ class DHT (object):
         for (path,hash) in self.arrayWithHashAndPath:
             fileID = self.convertHashToInt(hash)
             node = self.responsableNodeForFileID(fileID)
-            self.arrayWithHashAndPath.append((node, hash))
+            self.arrayWithNodesResponsablesForHash.append((node, hash))
         self.sendHashsToAllNodes()
 
     def responsableNodeForFileID(self, fileID):
@@ -342,7 +342,7 @@ class DHT (object):
 
     def sendFilesToUser(self, userID):
         (ip, port) = self.getIPPortForID(userID)
-        listWithHashes = self.getListWithHashesForUserID(id)
+        listWithHashes = self.getListWithHashesForUserID(userID)
         masterServer.MasterServer.sendFilesForUser(userID, ip, listWithHashes)
 
     #retorna numero de arquivos
