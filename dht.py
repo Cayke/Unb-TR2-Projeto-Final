@@ -200,6 +200,7 @@ class DHT (object):
         newPath = os.path.join(directory, newDirName)
         try:
             os.rename(path, newPath)
+            self.renameDirInMemory(path, newPath)
             return True
         except:
             return False
@@ -243,6 +244,7 @@ class DHT (object):
         newPath = os.path.join(directory, newFileName)
         try:
             os.rename(path, newPath)
+            self.renameDirInMemory(path, newPath)
             return True
         except:
             return False
@@ -300,6 +302,13 @@ class DHT (object):
     def getCurrentDirectoryName(self, fullPath):
         fullPath = self.getLocalPathForPath(fullPath)
         return os.path.basename(fullPath)
+
+    def renameDirInMemory(self, oldPath, newPath):
+        for (dir, hash) in self.arrayWithHashAndPath:
+            if oldPath in dir:
+                self.arrayWithHashAndPath.remove((dir, hash))
+                newDir = dir.replace(oldPath, newPath)
+                self.arrayWithHashAndPath.append((newDir,self.getHashForPath(newDir)))
 
     def rebalancing(self):
         self.arrayWithNodesResponsablesForHash = []
