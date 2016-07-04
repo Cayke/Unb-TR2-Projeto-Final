@@ -6,7 +6,7 @@ import Define
 import time
 
 class MasterServer(object):
-    HOST = '192.168.43.200'
+    HOST = '127.0.0.1'
     PORT = 5001
     DHT = DHT(50)
 
@@ -45,46 +45,52 @@ class MasterServer(object):
                 return False
 
     def getRequestStatus(self, request, socketTCP, client):
-        type = request['type']
+        try:
+            type = request['type']
 
-        if type == Define.REGISTER:
-            self.registerUser(request,socketTCP,client)
+            if type == Define.REGISTER:
+                self.registerUser(request,socketTCP,client)
 
-        elif type == Define.LOGIN:
-            self.logUser(request,socketTCP,client)
+            elif type == Define.LOGIN:
+                self.logUser(request,socketTCP,client)
 
-        elif type == 'keepalive':
-           self.userStillActive(request,socketTCP,client)
+            elif type == 'keepalive':
+               self.userStillActive(request,socketTCP,client)
 
-        elif type == Define.UPLOAD:
-            self.uploadFile(request,socketTCP, client)
+            elif type == Define.UPLOAD:
+                self.uploadFile(request,socketTCP, client)
 
-        elif type == Define.DOWNLOAD:
-            self.downloadFile(request,socketTCP, client)
+            elif type == Define.DOWNLOAD:
+                self.downloadFile(request,socketTCP, client)
 
-        elif type == Define.DIRINFO:
-            self.sendDirectoriesTree(socketTCP)
+            elif type == Define.DIRINFO:
+                self.sendDirectoriesTree(socketTCP)
 
-        elif type == Define.INFOFILES:
-            self.infoFiles(request,socketTCP, client)
+            elif type == Define.INFOFILES:
+                self.infoFiles(request,socketTCP, client)
 
-        elif type == Define.CREATEDIR:
-            self.createDir(request,socketTCP, client)
+            elif type == Define.CREATEDIR:
+                self.createDir(request,socketTCP, client)
 
-        elif type == Define.RENAMEDIR:
-            self.renameDir(request,socketTCP, client)
+            elif type == Define.RENAMEDIR:
+                self.renameDir(request,socketTCP, client)
 
-        elif type == Define.REMOVEDIR:
-            self.removeDir(request,socketTCP, client)
+            elif type == Define.REMOVEDIR:
+                self.removeDir(request,socketTCP, client)
 
-        elif type == Define.REMOVEFILE:
-            self.removeFile(request,socketTCP, client)
+            elif type == Define.REMOVEFILE:
+                self.removeFile(request,socketTCP, client)
 
-        elif type == Define.RENAMEFILE:
-            self.renameFile(request,socketTCP, client)
+            elif type == Define.RENAMEFILE:
+                self.renameFile(request,socketTCP, client)
 
-        else:
-            response = dict(responseStatus = Define.ERROR, errormsg = 'undefined_type')
+            else:
+                response = dict(responseStatus = Define.ERROR, errormsg = 'undefined_type')
+                responseJSON = json.dumps(response)
+                socketTCP.send(responseJSON)
+
+        except:
+            response = dict(responseStatus = Define.ERROR, errormsg = 'unknown_error')
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
 
@@ -140,7 +146,7 @@ class MasterServer(object):
             response = dict(responseStatus = Define.SUCCESS)
             responseJSON = json.dumps(response)
             socketTCP.send(responseJSON)
-
+            self.DHT.rebalancing()
         else:
             response = dict(responseStatus = Define.ERROR, errormsg = 'error_processing_file')
             responseJSON = json.dumps(response)
