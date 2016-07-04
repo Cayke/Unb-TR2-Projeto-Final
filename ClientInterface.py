@@ -12,9 +12,9 @@ import threading
 class ClientInterface:
 
     __IP = '192.168.43.200'   # Server IP
-    __PORTSERVER = 5002  # Server PORT
+    __PORTSERVER = 5005   # Server PORT
     __PORTCLIENT = 6000  # Client PORT to recive DHT files
-    __ID = -1            # ID do usuário
+    __ID = -6            # ID do usuário
     __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     __username = ''
     __serverdown = False
@@ -34,7 +34,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
@@ -73,7 +72,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
@@ -104,7 +102,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
@@ -125,7 +122,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
@@ -162,7 +158,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
@@ -188,7 +183,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -213,7 +207,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -234,7 +227,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -256,7 +248,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -277,7 +268,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -295,7 +285,6 @@ class ClientInterface:
         try:
             jsonresponse = json.loads(response)
         except:
-            self.__ID = -1
             return dict(code=Define.ERROJSON, msg="Decoding JSON has failed. Connection down")
 
         if jsonresponse["responseStatus"] == Define.SUCCESS:
@@ -350,7 +339,7 @@ class ClientInterface:
     def __downloadserverhash(self, hash):
         jsonmsg = dict(method='hash', hash=hash, type=Define.DOWNLOAD)
         msg = json.dumps(jsonmsg)
-        response = self.__sendMSGtoserver(msg)
+        response = self.__sendMSG(msg, self.__IP, self.__PORTSERVER + 1)
         jsonresponse = json.loads(response)
         if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
             return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
@@ -362,7 +351,6 @@ class ClientInterface:
         try:
             jsonrtn = json.loads(rtn)
         except:
-            self.__ID = -1
             return dict(code=jsonrtn["responseStatus"], msg="Decoding JSON has failed. Connection down")
 
         if int(jsonrtn['responseStatus']) == Define.SUCCESS:
