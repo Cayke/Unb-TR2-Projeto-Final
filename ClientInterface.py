@@ -11,8 +11,8 @@ import threading
 
 class ClientInterface:
 
-    __IP = '10.32.3.65'   # Server IP
-    __PORTSERVER = 5000  # Server PORT
+    __IP = '192.168.43.200'   # Server IP
+    __PORTSERVER = 5002  # Server PORT
     __PORTCLIENT = 6000  # Client PORT to recive DHT files
     __ID = -1            # ID do usuário
     __tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -145,12 +145,12 @@ class ClientInterface:
                 if int(jsonresponse["responseStatus"]) == Define.SUCCESS:
                     return dict(code=Define.SUCCESS, msg=base64.b64decode(jsonresponse["data"]))
                 else:
-                    return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+                    return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
             else:
-                return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+                return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
         else:
-            return dict(code=response["responseStatus"], msg=jsonresponse["errormsg"])
+            return dict(code=jsonresponse["responseStatus"], msg=jsonresponse["errormsg"])
 
     def dirinfo(self):
         if self.__ID == -1:
@@ -416,11 +416,10 @@ class ClientInterface:
                     filepath = directory + '/' + array[index]
                     with open(filepath, 'wb') as f:
                         rtn = self.__downloadserverhash(array[index])
-                        jsonrtn = json.loads(rtn)
-                        f.write(base64.b64decode(jsonrtn['data']))
+                        f.write(rtn['msg'])
 
             elif jsonmsg['type'] == Define.DOWNLOAD:
-                filepath = directory + '/' + jsonmsg['Hash']
+                filepath = directory + "/" + str(jsonmsg['hash'])
                 with open(filepath, 'rb') as f:
                     data = f.read()
                     data64 = base64.b64encode(data)
