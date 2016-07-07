@@ -3,7 +3,7 @@ import json
 from ClientInterface import *
 import Define
 
-# Envio de mensagens ao servidor
+# Classe responsável por realizar requisições com o server do cliente. Utilizado pelo gerenciador do HTML.
 class ServerRequests:
 	"""docstring for ClassName"""
 	clientInterface = None

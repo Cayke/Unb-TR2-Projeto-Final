@@ -1,9 +1,11 @@
+# coding=utf-8
 from tempfile import TemporaryFile
 from wsgiref import simple_server
 import cgi, re
 from ServerRequests import *
 import UIGenerator
 
+# Classe responsável por gerenciar a interface HTML e realizar a comunicação com o servidor local.
 class UIServer:
 
     STATIC_URL_PREFIX = '/static/'
@@ -13,6 +15,7 @@ class UIServer:
     urls = []
     serverRequests = None
 
+    # Método inicial que inicializa o servidor do cliente e o servidor que se comunica com o HTML.
     def __init__(self):
         self.urls = [(r'^$',self.main),
             (r'login/?$',self.login),
@@ -53,6 +56,7 @@ class UIServer:
         else:
             return [login]
 
+    # Método responsável por gerenciar a tela de login.
     def login(self,env,resp):
         if env['REQUEST_METHOD'] == 'POST':
             post_env = env.copy()
@@ -70,6 +74,8 @@ class UIServer:
         return [self.userName]
 
 #MARK: Files page
+
+    # Método responsável por gerenciar a tela de árvore de diretórios.
     def fileStructure(self,env,resp):
         jsonFile = self.serverRequests.fileDistribution()
         if (jsonFile == None):
@@ -79,6 +85,8 @@ class UIServer:
         return html
 
 #MARK: Dir operations
+
+    # Metodo responsável por gerenciar a página de um diretório.
     def dirPage(self,env,resp):
         if env['REQUEST_METHOD'] == 'POST':
             post_env = env.copy()
@@ -135,6 +143,8 @@ class UIServer:
         return body
 
 #MARK: FILES OPERATIOS
+
+    # Metodo responsável por gerenciar a página de um arquivo.
     def filePage(self,env,resp):
         if env['REQUEST_METHOD'] == 'POST':
             post_env = env.copy()
@@ -179,6 +189,8 @@ class UIServer:
         return [file]
 
 #MARK: Server info
+
+    # Método responsável por criar a tela com as informacoes do master.
     def serverInfo(self,env,resp):
         info = self.serverRequests.getServerInfo()
         if (info == None):
